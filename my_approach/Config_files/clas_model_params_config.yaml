@@ -1,0 +1,73 @@
+---
+
+ann_model_params: {'epochs': 5, #100, #1000,
+                   'batch_size': 32,
+                   'shuffle': True,
+                   'initialiser': 'normal',
+                   'activation_funct_1': 'relu',
+                   'activation_funct_2': 'softmax',
+                   'loss_funct': "categorical_crossentropy",
+                   'default_learning_rate': 1e-2,
+                   'optimisation_metric': 'accuracy',
+                   'early_stopping_verbose': 1,
+                   'model_fit_verbose': 1,
+                   'use_multiprocessing': True,
+                   'validation_split': 0.1,
+                   'validation_freq': 1,
+                   'patience': 100,
+                   'mode': 'max',
+                   'monitor': 'val_loss',
+                  }
+
+lstm_model_params: {'epochs': 5, #100, #1500,
+                     'batch_size': 32,
+                     'shuffle': True,
+                     'activation_funct_1': 'relu',
+                     'activation_funct_2': 'softmax',
+                     'loss_funct': "categorical_crossentropy",
+                     'default_learning_rate': 1e-3,
+                     'optimisation_metric': 'accuracy',
+                     'early_stopping_verbose': 1,
+                     'model_fit_verbose': 1,
+                     'use_multiprocessing': True,
+                     'validation_split': 0.1,
+                     'validation_freq': 1,
+                     'patience': 50,
+                     'mode': 'max',
+                     'monitor': 'val_loss',
+                    }
+
+sann_model_params: {'num_models': 5,
+                    'batch_size': 32,
+                    'epochs_sub_model': 5, #100, #1000,
+                    'epochs_ensemble': 5, #100, #300,
+                    'model_fit_verbose': 1,
+                    'shuffle': True,
+                    'default_learning_rate': 1e-3,
+                    'initialiser': 'normal',
+                    'activation_funct_1': 'relu',
+                    'activation_funct_2': 'softmax',
+                    'loss_funct': 'categorical_crossentropy',
+                    'optimisation_metric': 'accuracy',
+                   }
+
+svm_model_params: {'kernel': 'sigmoid',
+                   'C': 0.051663235494099666, # 1000,
+                   'gamma': 22.63808819293638,
+                   'model_fit_verbose': True,
+                  }
+
+sgdc_model_params: {'loss': 'hinge',
+                    'shuffle': True,
+                    'early_stopping_bool': True,
+                    'n_iter_no_change': 100,
+                    'model_fit_verbose': 1,
+                    'max_iter': 1000,
+                   }
+
+xgb_model_params: {'model_fit_verbose': 1,
+                   'default_learning_rate': 1e-3,
+                   'n_estimators': 2,
+                   'early_stopping_patience': 10,
+                  }
+
