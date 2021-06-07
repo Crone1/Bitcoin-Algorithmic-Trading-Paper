@@ -4,9 +4,9 @@
 # --- If downloading the code and attempting to run it, these must be changed to your local location
 chromedriver_location: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe'
 downloads_folder: 'C:\\Users\\Owner\\Downloads'
-data_directory: 'C:\\Users\\Owner\\Documents\\College\\Final_Year_Project\\2021-ca4021-cronen2\\my_additional_code\\Data'
-profile_report_directory: 'C:\\Users\\Owner\\Documents\\College\\Final_Year_Project\\2021-ca4021-cronen2\\my_additional_code\\Data'
-model_directory: 'C:\\Users\\Owner\\Documents\\College\\Final_Year_Project\\2021-ca4021-cronen2\\my_additional_code\\Trained_models'
+data_directory: 'C:\\Users\\Owner\\Documents\\College\\Final_Year_Project\\2021-ca4021-cronen2\\my_approach\\Data'
+profile_report_directory: 'C:\\Users\\Owner\\Documents\\College\\Final_Year_Project\\2021-ca4021-cronen2\\my_approach\\Data'
+model_directory: 'C:\\Users\\Owner\\Documents\\College\\Final_Year_Project\\2021-ca4021-cronen2\\my_approach\\Trained_models'
 audio_file_path: 'C:\\Users\\Owner\\Documents\\College\\Final_Year_Project\\2021-ca4021-cronen2\\music.wav'
 
 # when is the first day to start scraping data from
