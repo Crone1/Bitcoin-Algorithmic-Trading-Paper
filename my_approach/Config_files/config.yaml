@@ -330,7 +330,7 @@ train_intervals_list:
   - !!python/tuple ['2015-08-17', '2020-12-31']
 
 # end date of the data used to test the models 
-end_test_date: '2021-05-01'
+end_test_date: '2021-06-01'
 
 # the type of analysis to run
 types_of_analysis:
