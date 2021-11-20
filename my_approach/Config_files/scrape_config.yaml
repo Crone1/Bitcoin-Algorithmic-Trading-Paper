@@ -1,0 +1,314 @@
+---
+
+# define the directories where different things are stored
+# --- If downloading the code and attempting to run it, these must be changed to your local location
+chromedriver_location: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe'
+downloads_folder: 'C:\\Users\\Owner\\Downloads'
+
+# when is the first day to start scraping data from
+start_date: "2009-01-01"
+
+# the biticoinity features list
+bitcoinity_features_list: ["trading_volume",
+                           "rank",
+                           "price",
+                           "market_cap",
+                           "trades_per_minute",
+                           "volatility",
+                           "bid_and_ask_spread",
+                           "bid_and_ask_sum_asks",
+                           "bid_and_ask_sum_bids",
+                           "hashrate",
+                           "mining_difficulty",
+                           "block_size",
+                           "number_of_transactions",
+                           "time_between_blocks",
+                           "block_size_votes",
+                          ]
+
+
+# the bitinfocharts features list
+bitinfocharts_features_list: ['marketcap',
+                              'price',
+                              'transactions',               # number of transactions on blockchain
+                              'sentinusd',                  # amount of bitcoins sent in USD
+                              'transactionvalue',           # average transaction value
+                              'mediantransactionvalue',     # median transaction value
+                              'transactionfees',            # average transaction fee
+                              'median_transaction_fee',
+                              'confirmationtime',           # Average time between blocks
+                              'size',                       # Block size
+                              'fee_to_reward',              # Average fee % in total block reward
+                              'difficulty',                 # Average mining difficulty per day
+                              'hashrate',                   # Average hash rate (hash/s) per day
+                              'mining_profitability',       # USD/Day for 1 THash/s
+                              'activeaddresses',            # number of unique addresses (from or to) per day
+                              'tweets',                     # number of tweets per day with '#Bitcoin'
+                              'sentbyaddress',              # nuumber of unique (from) addresses per day
+                              'google_trends',              # Google trends for 'Bitcoin'
+                              'top100cap',                  # the proportion of all bitcoins held by the top 100 accounts
+                             ]
+
+# dictionary to rename columns when merging the above two internal bitcoin datasets
+bitcoin_internal_data_cols_to_join: {
+                                     "market_cap":        !!python/tuple ["market_cap", 'marketcap'],
+                                     "price":             !!python/tuple ["price_x", 'price_y'],
+                                     "block_size":        !!python/tuple ["block_size", 'size'],
+                                     "hashrate":          !!python/tuple ["hashrate_x", 'hashrate_y'],
+                                     "mining_difficulty": !!python/tuple ["mining_difficulty", 'difficulty'],
+                                     "num_transactions":  !!python/tuple ["number_of_transactions", 'transactions'],
+                                    }
+
+# technichal indicators used when scraping the bitcoin internal features data
+technical_indicator_list: ['sma', 'ema', 'wma', 'trx', 'mom', 'std', 'var', 'rsi', 'roc']
+technichal_indicator_time_period_list: ['3', '7', '14', '30', '90']
+
+# the ticker values of the stocks to scrape from yahoo finance
+yahoo_name_to_ticker_map: {
+#------------------------- market indexes
+                           "sp_500"               : "^GSPC",        # The S&P 500 stock market index ($) - measures stock performance of 500 large companies on the US stock exchanges
+                           "dow_jones"            : "^DJI",         # The Dow Jones Industrial Average ($) - stock market index measuring stock performance of 30 large companies on US stock exchanges
+                           "vix"                  : "^VIX",         # VIX - The market's expectation of 30-day forward-looking volatility in S&P 500 options (Fear in Market)
+                           "ftse_100"             : "^FTSE",        # UK Financial Times Stock Exchange 100 Index (£) - index compiled of the top 100 capitalized UK companies on the London Stock Exchange
+                           "euro_stoxx_50"        : "^STOXX50E",    # The EURO STOXX 50 - index of Eurozone stocks that provide a blue-chip representation of Supersector leaders in the Eurozone
+                           #"crypto_index"         : "^CMC200",      # The CMC Crypto 200 Index - deal with data of over 90% of the world’s crypto market
+                           #"crypto_index_no_bit"  : "^CMC200EX",    # CMC Crypto 200 ex BTC Index – deal with data of over 90% of the world’s crypto market but does not include BTC. Monitor how market performs without Bitcoin
+                           #"arca_steel_index"     : "^STEEL",       # The NYSE Arca Steel Index - market cap weighted index of companies involved primarily in the production of steel products or mining and processing of iron ore
+#------------------------- exchange composites
+                           "nasdaq_exchange"      : "^IXIC",        # The Nasdaq Composite ($) - stock market index that includes almost all stocks listed on the Nasdaq stock market
+                           "new_york_exchange"    : "^NYA",         # The New York Stock Exchange Composite ($) - stock market index that includes all common stock listed on the NYSE
+                           "amex_exchange"        : "^XAX",         # The AMEX NYSE Composite ($) - index of stocks that represent a portion of securities traded on the NYSE Amex exchange
+                           "russell_2000"         : "^RUT",         # Russell 2000 Index ($)- small-cap stock market index of the smallest 2,000 stocks in the Russell 3000 Index which contains largest 3,000 US stocks
+                           "euronext_100_euro"    : "^N100",        # Euronext 100 Index (€)- blue chip index comprised of largest & most liquid stocks. Each stock trades >20% its shares each year on pan-European exchange
+                           "irish_exchange"       : "^ISEQ",        # ISEQ Overall Index (€) - index following all companies that trade on Euronext Dublin exchange
+                           "singapore_exchange"   : "^STI",         # FTSE Straits Times Index (SGD) - capitalisation-weighted stock market index that is the benchmark index for the Singapore stock market
+                           "buenos_aires_exchange": "^MERV",        # The S&P MERVAL Index - a price-weighted index of the Buenos Aires Stock Exchange
+                           "taiwan_exchange"      : "^TWII",        # The Taiwan Capitalization Weighted Stock Index (TWD) - index for companies traded on the Taiwan Stock Exchange
+                           "toronto_exchange"     : "^GSPTSE",      # The S&P/TSX Composite Index (CAD) - Canadian index representing 70% of the market cap on the Toronto Stock Exchange through about 250 companies
+                           "mexican_exchange"     : "^MXX",         # The MXX index (MXN) - indicator of the Mexican economy through 35 stocks with each having a market value of at least $100 million dollars
+                           "belgium_20"           : "^BFX",         # Belgium 20 stocks (€) -  the index consists 10 - 20 companies traded at the Brussels Stock Exchange
+                           "turkey_bist_100"      : "XU100.IS",     # The Borsa Istanbul 100 Index (TRY) - a capitalization-weighted index of the 100 companies on the Istanbul Stock Exchange with the highest volume and market value
+                           "german_dax"           : "^GDAXI",       # The Deutsch Boerse DAX Index (€) - blue chip stock market index consisting of the 30 major German companies trading on the Frankfurt Stock Exchange
+                           "french_cac_40"        : "^FCHI",        # The CAC 40 (€) - capitalization-weighted measure of the 40 most significant stocks among the 100 largest market caps on the Euronext Paris
+                           "spain_ibex_30"        : "^IBEX",        # The IBEX 35 (€) - market capitalization weighted index comprising the 35 most liquid Spanish stocks traded in the Madrid Stock Exchange General Index
+                           "hong_kong_hang_seng"  : "^HSI",         # The Hang Seng Index (HKD) - freefloat-adjusted market-capitalization-weighted stock-market index of the largest companies of the Hong Kong stock market
+                           "japan_nikkei_225"     : "^N225",        # The Nikkei 225 (JPN) - stock market index for the Tokyo Stock Exchange
+                           "korean_kospi"         : "^KS11",        # The Korea Composite Stock Price Index (KRW) - index of all common stocks traded on the Stock Market Division—previously, Korea Stock Exchange—of the Korea Exchange  
+                           #"egypt_30"             : "^CASE30",      # The CASE 30 (EGP) - index from Cairo & Alexandria Stock Exchange in Egypt. Includes the 30 most active stocks in the Egyptian stock market weighted by market capitalization
+                           "australian_exchange"  : "^AORD",        # All Ordinaries exchange (AUD) - the oldest index of shares in Australia, containing the 500 largest companies listed on the Australian Securities Exchange
+                           "australia_asx_200"    : "^AXJO",        # The S&P/ASX 200 index (AUD) - market-capitalization weighted and float-adjusted stock market index of stocks listed on the Australian Securities Exchange.
+                           "santiago_exchange"    : "^IPSA",        # The S&P IPSA - measure the performance of the largest and most liquid stocks listed on the Santiago Exchange
+                           "indonesia_exchange"   : "^JKSE",        # The IDX Composite - index of all stocks listed on the Indonesia Stock Exchange
+                           #"johannesburg_exchange": "^JN0U.JO",     # The Top 40 USD Index - mirrors the Top 40 Index but is calculated using constituent prices valued in USD instead of ZAR. Minimum of 5%
+                           #"quatar_exchange"      : "^QEAS.QA",     # Quatar all shares index - QE index measures the performance of all shares in the Qatar market
+#------------------------- Comodity futures - Futures =  a legal agreement to buy or sell the items at this predetermined price in the next month
+                           #"bloomberg_commodity_index_futures": "AW=F",         # The bloomberg commodity index futures ($)
+                           "crude_oil_futures"    : "CL=F",         # Crude Oil Futures ($)
+                           "natural_gas_futures"  : "NG=F",         # natural gas futures ($)
+                           "gold_futures"         : "GC=F",         # Gold Futures ($)
+                           "silver_futures"       : "SI=F",         # Silver Futures ($)
+                           "platinum_futures"     : "PL=F",         # Platinum Futures ($)
+                           "aluminium_futures"    : "ALI=F",        # aluminium futures ($)
+                           "lumber_futures"       : "LBS=F",        # lumber futures ($)
+                           "copper_futures"       : "HG=F",         # copper futures ($)
+                           "palladium_futures"    : "PA=F",         # palladium futures ($)
+                           "cotton_futures"       : "CT=F",         # cotton futures ($/100)
+                           "soybean_meal_futures" : "ZS=F",         # Soybean meal futures ($/100)
+                           "soybean_oil_futures"  : "ZL=F",         # Soybean oil futures ($/100)
+                           "corn_futures"         : "ZC=F",         # cordn futures ($/100)
+                           "wheat_futures"        : "ZW=F",         # wheat futures ($/100)
+                           "oat_futures"          : "ZO=F",         # oat futures ($/100)
+                           "rough_rice_futures"   : "ZR=F",         # rough rice futures ($)
+                           "sugar_futures"        : "SB=F",         # sugar futures ($/100)
+                           "cocoa_futures"        : "CC=F",         # cocoa futures ($)
+                           "coffee_futures"       : "KC=F",         # coffee futures ($/100)
+                           #"orange_juice_futures" : "OJ=F",         # orange juice futures ($/100)
+                           "live_cattle_futures"  : "LE=F",         # live cattle futures ($/100)
+                           "lean_hogs_futures"    : "HE=F",         # lean hogs futures ($/100)
+#------------------------- exchange rates
+                           "eur_gbp_exchange"     : "EURGBP=X",     # The Eur-GBP exchange rate
+                           "eur_chf_exchange"     : "EURCHF=X",     # The Eur-swiss franc exchange rate
+                           "eur_jpy_exchange"     : "EURJPY=X",     # The Eur-Japanese Yen exchange rate
+                           "gbp_jyp_exchange"     : "GBPJPY=X",     # The GBP-JPY exchange rate
+                           "usd_gbp_exchange"     : "GBP=X",        # The USD-GBP exchange rate
+                           "usd_eur_exchange"     : "EUR=X",        # The USD-Eur exchange rate
+                           "usd_cad_exchange"     : "CAD=X",        # The USD-canadian dollar exchange rate
+                           "usd_aud_exchange"     : "AUD=X",        # The USD-Australian dollar exchange rate
+                           "usd_mxn_exchange"     : "MXN=X",        # The USD-mexican peso exchange rate
+                           "usd_hkd_exchange"     : "HKD=X",        # The USD-hong kong dollar exchange rate
+                           "usd_jpy_exchange"     : "JPY=X",        # The USD-Japanese Yen exchange rate
+                          }
+
+# the ticker values of the economic data released by the federal reserve
+fred_tickers: {
+               # Growth
+               "us_gdp"                                 : "GDP",           # Gross Domestic Product
+               "us_real_GDP"                            : "GDPC1",         # Real Gross Domestic Product
+               "us_real_pot_gdp"                        : "GDPPOT",        # Real Potential Gross Domestic Product
+               # Inflation
+               "us_cpi_all"                             : "CPIAUCSL",             # Consumer Price Index for All Urban Consumers: All Items in U.S. City Average
+               "us_cpi_no_food_and_energy"              : "CPILFESL",             # Consumer Price Index for All Urban Consumers: All Items Less Food & Energy
+               "us_cpi_no_food_and_energy_perc_change"  : "CORESTICKM159SFRBATL", # Sticky Consumer Price Index: All Items Less Food & Energy
+               "us_median_cpi"                          : "MEDCPIM158SFRBCLE",    # Median CPI - annual % change
+               "us_gdp_ipd"                             : "GDPDEF",               # Gross Domestic Product: Implicit Price Deflator
+               # Money Supply
+               "us_monetart_base"                       : "BASE",          # St. Louis Adjusted Monetary Base - sum of currency in circulation outside the FED and  U.S. Treasury, + deposits held by the FED
+               "us_m1_money"                            : "M1",            # M1 Money Stock - liquid assetts (cash, checkable deposits, traveler's checks)
+               "us_m2_money"                            : "M2",            # M2 Money Stock - includes M1 & less liquid assets (savings & time deposits, money market funds)
+               "us_velocity_m1_money"                   : "M1V",           # Velocity of M1 Money Stock
+               "us_velocity_m2_money"                   : "M2V",           # Velocity of M2 Money Stock
+               # Interest rates
+               "us_fed_funds_rate"                      : "DFF",           # Effective Federal Funds Rate - the interest rate depository institutions lend reserve balances to other institutions overnight uncollateralized
+               "us_3_month_secondary_tbill"             : "DTB3",          # 3-Month Treasury Bill: Secondary Market Rate
+               "us_5_year_treasury_const_mat_rate"      : "DGS5",          # 5-Year Treasury Constant Maturity Rate - FED index based on the average yield of a range of Treasury securities adjusted to a five-year maturity
+               "us_10_year_treasury_const_mat_rate"     : "DGS10",         # 10-Year Treasury Constant Maturity Rate - FED index based on the average yield of a range of Treasury securities adjusted to a ten-year maturity
+               "us_30_year_treasury_const_mat_rate"     : "DGS30",         # 30-Year Treasury Constant Maturity Rate - FED index based on the average yield of a range of Treasury securities adjusted to a thirty-year maturity
+               "us_5_year_be_inflation_rate"            : "T5YIE",         # 5-year Breakeven Inflation Rate - expected inflation based on 5-Year Treasury Constant Maturity Securities and Treasury Inflation-Indexed Constant Maturity Securities 
+               "us_10_year_be_inflation_rate"           : "T10YIE",        # 10-year Breakeven Inflation Rate - expected inflation based on 10-Year Treasury Constant Maturity Securities and Treasury Inflation-Indexed Constant Maturity Securities
+               "us_20_year_be_inflation_rate"           : "T20YIEM",       # 20-year Breakeven Inflation Rate - expected inflation based on 20-Year Treasury Constant Maturity Securities and Treasury Inflation-Indexed Constant Maturity Securities
+               "us_30_year_be_inflation_rate"           : "T30YIEM",       # 30-year Breakeven Inflation Rate - expected inflation based on 30-Year Treasury Constant Maturity Securities and Treasury Inflation-Indexed Constant Maturity Securities
+               "us_5_yr_5_yr_fwd_inflatn_expectation"   : "T5YIFR",        # 5-Year, 5-Year Forward Inflation Expectation Rate - measure of average expected inflation over the five-year period that begins five years from today.
+               "us_ted_spread"                          : "TEDRATE",       # TED Spread - difference between interest rate on short-term U.S. government debt and the interest rate on interbank loans
+               "us_prime_loan_rate"                     : "DPRIME",        # Bank Prime Loan Rate - interest rate used by banks, usually the interest rate at which banks lend to customers with good credit
+               # Employment
+               "us_unemployment_rate"                   : "UNRATE",        # Civilian Unemployment Rate - number of unemployed as a percentage of the labor force
+               "us_long_natural_unemployment_rate"      : "NROU",          # Natural Rate of Unemployment (Long-Term) - the minimum unemployment rate resulting from real or voluntary economic forces
+               "us_short_natural_unemployment_rate"     : "NROUST",        # Natural Rate of Unemployment (Short-Term) - the minimum unemployment rate resulting from real or voluntary economic forces
+               "us_labour_force_employ_rate"            : "CIVPART",       # Civilian Labor Force Participation Rate - percentage of all people of working age who are employed or are actively seeking work
+               "us_pop_employ_rate"                     : "EMRATIO",       # Civilian Employment-Population Ratio - proportion of the country's working age population that is employed
+               "us_num_unemployed"                      : "UNEMPLOY",      # Unemployed - num peopke unemployed
+               "us_nonfarm_num_employed"                : "PAYEMS",        # All Employees: Total nonfarm - # U.S. workers in economy (NO proprietors, private household employees, unpaid volunteers, farm employees, & unincorporated self-employed)
+               "us_num_employed_in_manufactoring"       : "MANEMP",        # All Employees: Manufacturing
+               "us_num_filing_for_unemployment"         : "ICSA",          # Initial Claims -  num claims for Unemployment Insurance program filed by an unemployed individual after a separation from an employer
+               # Income and Expenditure
+               "us_median_house_income"                 : "MEHOINUSA672N", # Real Median Household Income in the United States - Estimation of Median Incomes
+               "us_total_real_disposable_income"        : "DSPIC96",       # Real Disposable Personal Income
+               "us_tot_personal_consumption_spend"      : "PCE",           # Personal Consumption Expenditures
+               "us_tot_personal_consumption_spend_dg"   : "PCEDG",         # Personal Consumption Expenditures: Durable Goods
+               "us_percent_personal_saving_rate"        : "PSAVERT",       # Personal Saving Rate (%)
+               "us_real_retail_and_food_sales"          : "RRSFS",         # Real Retail and Food Services Sales
+               "us_total_disposble_income"              : "DSPI",          # Disposable personal income
+               # Other economic indicators
+               "us_industry_production_index"           : "INDPRO",        # Industrial Production Index - measures real output for all manufacturing, mining, and electric, and gas utilities located in the US
+               "us_capacity_utilisation"                : "TCU",           # Capacity Utilization: Total Industry - how much capacity is being used from the total available capacity to produce demanded finished products
+               "us_new_housing_devs_started"            : "HOUST",         # Housing Starts: Total: New Privately Owned Housing Units Started - a 'start' counts once excavation of the site starts
+               "us_gross_private_domestic_investment"   : "GPDI",          # Gross Private Domestic Investment - amount of money that domestic businesses invest within their own country
+               "us_corporate_profit_aftr_tax"           : "CP",            # Corporate Profits After Tax (without IVA and CCAdj)
+               "us_financial_stress_index"              : "STLFSI",        # St. Louis Fed Financial Stress Index - the degree of financial stress in the markets
+               "west_texas_crude_oil_price"             : "DCOILWTICO",    # Crude Oil Prices: West Texas Intermediate (WTI) - Cushing, Oklahoma
+               "us_leading_index"                       : "USSLIND",       # Leading Index for the United States - predicts the six-month growth rate of the state's coincident index
+               "us_currency_trade_weighted_dollar_index": "DTWEXM",        # Trade Weighted U.S. Dollar Index: Major Currencies - weighted average of the foreign exchange value of the U.S. dollar against a subset of the broad index currencies
+               "us_broad_trade_weighted_dollar_index"   : "DTWEXB",        # Trade Weighted U.S. Dollar Index: Broad - weighted average of the foreign exchange value of the U.S. dollar against the currencies of a broad group of major U.S. trading partners
+               # Debt
+               "us_total_public_debt"                   : "GFDEBTN",       # Federal Debt: Total Public Debt
+               "us_public_debt_as_perc_of_gdp"          : "GFDEGDQ188S",   # Federal Debt: Total Public Debt as Percent of Gross Domestic Product
+               "us_bank_excess_capital_reserves"        : "EXCSRESNW",     # Excess Reserves of Depository Institutions - capital reserves held by banks or financial institution in excess of what is required
+               "us_total_commercial_loans"              : "TOTCI",         # Commercial and Industrial Loans, All Commercial Banks - a loan to a business rather than a loan to an individual consumer
+               # Bond Yields
+               "us_10_year_yield"                       : "THREEFY10",     # yield from Us 10-year treasury bond
+               "us_5_year_yield"                        : "THREEFY5",      # yield from Us 5-year treasury bond
+               "us_3_year_yield"                        : "THREEFY3",      # yield from Us 3-year treasury bond
+               "us_2_year_yield"                        : "THREEFY2",      # yield from Us 2-year treasury bond
+             }
+
+consumer_sentiment_tickers: {
+                             "consumer_survey_sentiment_index"   : "UMICH/SOC1",           # Index derived from University of Michigan Consumer survey
+                             "consumer_survey_residence_value"   : "UMICH/SOC22",          # University of Michigan Consumer survey - Current market value of primary residence
+                            }
+
+
+db_nomics_time_periods: {"10_yr": "Y10",
+                         "5_yr": "Y5",
+                         "2_yr": "Y2",
+                         "1_yr": "Y1",
+                         "6_mnts": "M6",
+                         "3_mnts": "M3",
+
+                        }
+
+db_nomics_eurostat_tickers_standalone: {
+                                        # Bond Yields
+                                        "all_euro_forward_yields" : "Eurostat/irt_euryld_d/D.EA.INS_FWD.{}.CGB_EA",    # Daily Instantaneous forward yield curve for All euro area central government bonds
+                                        "all_euro_spot_yields"    : "Eurostat/irt_euryld_d/D.EA.SPOT_RT.{}.CGB_EA",     # Daily Spot yield curve for All euro area central government bonds
+                                       }
+
+db_nomics_countries: {
+                      "eu"          : "EU28_2020",
+                      "euro_area"   : "EA",
+                      "euro_19"     : "EA19",
+                      "germany"     : "DE",
+                      "china_and_hk": "CN",
+                      "france"      : "FR",
+                      "russia"      : "RU",
+                      "canada"      : "CA",
+                      "turkey"      : "TR",
+                      "japan"       : "JP",
+                      "uk"          : "UK",
+                      "us"          : "US",
+                      "italy"       : "IT",
+                      "south_korea" : "KR",
+                      "belgium"     : "BE",
+                      "denmark"     : "DK",
+                      "sweden"      : "SE",
+
+                     }
+
+db_nomics_eurostat_tickers_for_countries: {
+                                           "government_10_yr_bonds"                 : "Eurostat/irt_lt_gby10_m/M.Y10.",
+                                           "long_term_gov_bond_yields"              : "Eurostat/irt_h_cgby_m/M.CGBY.",
+                                           "3_mnth_gov_bond_rates"                  : "Eurostat/irt_h_mr3_m/M.IRT_M3.",
+                                           "emu_convergence_bond_yield"             : "Eurostat/irt_lt_mcby_d/D.MCBY.",
+                                           "gov_debt"                               : "Eurostat/gov_10q_ggdebt/Q.F2.S13.MIO_EUR.",
+                                           "harmonised_index_consumer_prices"       : "Eurostat/ei_cphi_m/M.NSA.HICP2015.CP-HI00.",
+                                           "house_price_index"                      : "Eurostat/ei_hppi_q/Q.TOTAL.I15_NSA.",
+                                           "gdp_at_market_prices"                   : "Eurostat/gov_10dd_edpt1/A.MIO_EUR.S1.B1GQ.",
+                                           "nominal_effective_exchange_rate"        : "Eurostat/ert_eff_ic_m/M.I10.NEER_EA19.",
+                                           "day_to_day_interest_rate"               : "Eurostat/irt_st_m/M.IRT_DTD.",
+                                           "industry_production"                    : "Eurostat/sts_inpr_m/M.PROD.B-D.CA.I10.",
+                                           "producer_industry_prices"               : "Eurostat/sts_inpp_m/M.PRON.NSA.B-D.I10.",
+                                           "female_healty_life_years"               : "Eurostat/hlth_hlye/A.PC.F.HLY_PC_0.",
+                                           "male_healty_life_years"                 : "Eurostat/hlth_hlye/A.PC.M.HLY_PC_0.",
+                                           "current_account_balance"                : "Eurostat/ei_bpm6ca_q/Q.MIO_EUR.NSA.S1.S1.EXT_EA19.BAL.CKA.",
+                                           "unemployment"                           : "Eurostat/une_rt_m/M.NSA.TOTAL.PC_ACT.T.EA19",
+                                           "interest"                               : "Eurostat/ei_mfir_m/M.NSA.NAP.MF-LTGBY-RT.EU28",
+                                           "inflation"                              : "WB/WDI/FP.CPI.TOTL.ZG-EU",
+                                           "gdp_growth"                             : "WB/WDI/NY.GDP.MKTP.KD.ZG-EU",
+                                           "monthly_change_retail_trade"            : "Eurostat/sts_trtu_m/M.TOVT.G47.CA.PCH_SM.EA19",
+                                           "cpi"                                    : "Eurostat/prc_ipc_g20/M.I15.",
+                                           "secondary_house_purchases"              : "Eurostat/prc_hpi_q/Q.DW_EXST.INX_Q.",
+                                           "chain_linked_volumes"                   : "Eurostat/namq_10_gdp/Q.CLV05_MEUR.CA.B1G.",             # Value added, gross
+                                           "consumer_confidence_indicator"          : "Eurostat/ei_bsco_m/M.BAL.BS-CSMCI.NSA.",
+                                           "housing_price_index"                    : "Eurostat/ei_hppi_q/Q.TOTAL.I15_NSA.",
+                                           "job_vacancy_rate"                       : "Eurostat/ei_lmjv_q_r2/Q.JOBRATE.NSA.A-S.GE10.",
+                                           "retail_business_sales_confidence"       : "Eurostat/ei_bsrt_m_r2/M.BAL.BS-RAS.NSA.",
+                                           "services_business_3m_price_expectation" : "Eurostat/ei_bsse_m_r2/M.BAL.BS-PE3M.NSA.",
+                                           "business_employment_expectation"        : "Eurostat/ei_bsee_m_r2/M.SA.BS-CEME-BAL.BAL.",
+                                           "percent_housholds_w_internet"           : "Eurostat/isoc_r_iacc_h/A.PC_HH.",
+                                           "gov_debt_all"                           : "Eurostat/gov_10dd_cgd/A.F21.S11.TOTAL.MIO_EUR.",
+                                           "percent_afford_unexpected_expenses"     : "Eurostat/ilc_mdes04/A.PC.A1.A_MD60.",
+                                           "trust_in_legal_system"                  : "Eurostat/ilc_pw03/A.RTG.TOTAL.LEGTST.T.Y_GE16.",
+
+                                          }
+
+# the environment name used in twitter development to scrape the twitter data
+twitter_env_name: "bitcoinTweets"
+
+# the bitcoin query used in scraping bitcoin tweets
+twitter_bitcoin_query_words:
+   - 'bitcoin'
+   - 'btc'
+   - "bit coin"
+   - "btcusd"
+   - "crypto"
+   - "cryptocurrenc" # can end in 'y' or 'ies'
+   - "coin"
+   - "digital currency"
+   - "digital money"
+
+# the specific twitter users that most influence the bitcoin price with their tweets
+twitter_bitcoin_influencers:
+   - elonmusk        # Elon Musk
+   - VitalikButerin  # Vitalik Buterin
+   - cz_binance      # Changpeng Zao
+   - officialmcafee  # John McAfee
+   - SatoshiLite     # Charlie Lee
