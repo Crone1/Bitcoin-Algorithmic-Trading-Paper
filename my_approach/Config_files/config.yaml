@@ -2,10 +2,9 @@
 
 # define the directories where different things are stored
 # --- If downloading the code and attempting to run it, these must be changed to your local location
-data_directory: 'C:\\Users\\Owner\\Documents\\College\\Final_Year_Project\\2021-ca4021-cronen2\\my_approach\\Data'
-profile_report_directory: 'C:\\Users\\Owner\\Documents\\College\\Final_Year_Project\\2021-ca4021-cronen2\\my_approach\\Data'
-model_directory: 'C:\\Users\\Owner\\Documents\\College\\Final_Year_Project\\2021-ca4021-cronen2\\my_approach\\Trained_models'
-audio_file_path: 'C:\\Users\\Owner\\Documents\\College\\Final_Year_Project\\2021-ca4021-cronen2\\music.wav'
+data_directory: 'C:\\Users\\Owner\\Documents\\2021-ca4021-cronen2\\my_approach\\Data'
+model_directory: 'C:\\Users\\Owner\\Documents\\2021-ca4021-cronen2\\my_approach\\Trained_models'
+audio_file_path: 'C:\\Users\\Owner\\Documents\\2021-ca4021-cronen2\\music.wav'
 
 # the random forest model is used in one of the feature selection pocesses
 rand_forest_feat_select_params: {'step': 0.9,

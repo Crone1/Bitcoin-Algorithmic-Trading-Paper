@@ -4,8 +4,10 @@
 # --- If downloading the code and attempting to run it, these must be changed to your local location
 chromedriver_location: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe'
 downloads_folder: 'C:\\Users\\Owner\\Downloads'
+profile_report_directory: 'C:\\Users\\Owner\\Documents\\2021-ca4021-cronen2\\my_approach\\Data'
 
 # when is the first day to start scraping data from
+# this date should be chosen to be at before the date when you actually want the data for as some data isn't released daily so will only be scraped from its first data reading after this date
 start_date: "2009-01-01"
 
 # the biticoinity features list
@@ -64,80 +66,88 @@ technical_indicator_list: ['sma', 'ema', 'wma', 'trx', 'mom', 'std', 'var', 'rsi
 technichal_indicator_time_period_list: ['3', '7', '14', '30', '90']
 
 # the ticker values of the stocks to scrape from yahoo finance
-yahoo_name_to_ticker_map: {
-#------------------------- market indexes
-                           "sp_500"               : "^GSPC",        # The S&P 500 stock market index ($) - measures stock performance of 500 large companies on the US stock exchanges
-                           "dow_jones"            : "^DJI",         # The Dow Jones Industrial Average ($) - stock market index measuring stock performance of 30 large companies on US stock exchanges
-                           "vix"                  : "^VIX",         # VIX - The market's expectation of 30-day forward-looking volatility in S&P 500 options (Fear in Market)
-                           "ftse_100"             : "^FTSE",        # UK Financial Times Stock Exchange 100 Index (£) - index compiled of the top 100 capitalized UK companies on the London Stock Exchange
-                           "euro_stoxx_50"        : "^STOXX50E",    # The EURO STOXX 50 - index of Eurozone stocks that provide a blue-chip representation of Supersector leaders in the Eurozone
-                           #"crypto_index"         : "^CMC200",      # The CMC Crypto 200 Index - deal with data of over 90% of the world’s crypto market
-                           #"crypto_index_no_bit"  : "^CMC200EX",    # CMC Crypto 200 ex BTC Index – deal with data of over 90% of the world’s crypto market but does not include BTC. Monitor how market performs without Bitcoin
-                           #"arca_steel_index"     : "^STEEL",       # The NYSE Arca Steel Index - market cap weighted index of companies involved primarily in the production of steel products or mining and processing of iron ore
-#------------------------- exchange composites
-                           "nasdaq_exchange"      : "^IXIC",        # The Nasdaq Composite ($) - stock market index that includes almost all stocks listed on the Nasdaq stock market
-                           "new_york_exchange"    : "^NYA",         # The New York Stock Exchange Composite ($) - stock market index that includes all common stock listed on the NYSE
-                           "amex_exchange"        : "^XAX",         # The AMEX NYSE Composite ($) - index of stocks that represent a portion of securities traded on the NYSE Amex exchange
-                           "russell_2000"         : "^RUT",         # Russell 2000 Index ($)- small-cap stock market index of the smallest 2,000 stocks in the Russell 3000 Index which contains largest 3,000 US stocks
-                           "euronext_100_euro"    : "^N100",        # Euronext 100 Index (€)- blue chip index comprised of largest & most liquid stocks. Each stock trades >20% its shares each year on pan-European exchange
-                           "irish_exchange"       : "^ISEQ",        # ISEQ Overall Index (€) - index following all companies that trade on Euronext Dublin exchange
-                           "singapore_exchange"   : "^STI",         # FTSE Straits Times Index (SGD) - capitalisation-weighted stock market index that is the benchmark index for the Singapore stock market
-                           "buenos_aires_exchange": "^MERV",        # The S&P MERVAL Index - a price-weighted index of the Buenos Aires Stock Exchange
-                           "taiwan_exchange"      : "^TWII",        # The Taiwan Capitalization Weighted Stock Index (TWD) - index for companies traded on the Taiwan Stock Exchange
-                           "toronto_exchange"     : "^GSPTSE",      # The S&P/TSX Composite Index (CAD) - Canadian index representing 70% of the market cap on the Toronto Stock Exchange through about 250 companies
-                           "mexican_exchange"     : "^MXX",         # The MXX index (MXN) - indicator of the Mexican economy through 35 stocks with each having a market value of at least $100 million dollars
-                           "belgium_20"           : "^BFX",         # Belgium 20 stocks (€) -  the index consists 10 - 20 companies traded at the Brussels Stock Exchange
-                           "turkey_bist_100"      : "XU100.IS",     # The Borsa Istanbul 100 Index (TRY) - a capitalization-weighted index of the 100 companies on the Istanbul Stock Exchange with the highest volume and market value
-                           "german_dax"           : "^GDAXI",       # The Deutsch Boerse DAX Index (€) - blue chip stock market index consisting of the 30 major German companies trading on the Frankfurt Stock Exchange
-                           "french_cac_40"        : "^FCHI",        # The CAC 40 (€) - capitalization-weighted measure of the 40 most significant stocks among the 100 largest market caps on the Euronext Paris
-                           "spain_ibex_30"        : "^IBEX",        # The IBEX 35 (€) - market capitalization weighted index comprising the 35 most liquid Spanish stocks traded in the Madrid Stock Exchange General Index
-                           "hong_kong_hang_seng"  : "^HSI",         # The Hang Seng Index (HKD) - freefloat-adjusted market-capitalization-weighted stock-market index of the largest companies of the Hong Kong stock market
-                           "japan_nikkei_225"     : "^N225",        # The Nikkei 225 (JPN) - stock market index for the Tokyo Stock Exchange
-                           "korean_kospi"         : "^KS11",        # The Korea Composite Stock Price Index (KRW) - index of all common stocks traded on the Stock Market Division—previously, Korea Stock Exchange—of the Korea Exchange  
-                           #"egypt_30"             : "^CASE30",      # The CASE 30 (EGP) - index from Cairo & Alexandria Stock Exchange in Egypt. Includes the 30 most active stocks in the Egyptian stock market weighted by market capitalization
-                           "australian_exchange"  : "^AORD",        # All Ordinaries exchange (AUD) - the oldest index of shares in Australia, containing the 500 largest companies listed on the Australian Securities Exchange
-                           "australia_asx_200"    : "^AXJO",        # The S&P/ASX 200 index (AUD) - market-capitalization weighted and float-adjusted stock market index of stocks listed on the Australian Securities Exchange.
-                           "santiago_exchange"    : "^IPSA",        # The S&P IPSA - measure the performance of the largest and most liquid stocks listed on the Santiago Exchange
-                           "indonesia_exchange"   : "^JKSE",        # The IDX Composite - index of all stocks listed on the Indonesia Stock Exchange
-                           #"johannesburg_exchange": "^JN0U.JO",     # The Top 40 USD Index - mirrors the Top 40 Index but is calculated using constituent prices valued in USD instead of ZAR. Minimum of 5%
-                           #"quatar_exchange"      : "^QEAS.QA",     # Quatar all shares index - QE index measures the performance of all shares in the Qatar market
-#------------------------- Comodity futures - Futures =  a legal agreement to buy or sell the items at this predetermined price in the next month
-                           #"bloomberg_commodity_index_futures": "AW=F",         # The bloomberg commodity index futures ($)
-                           "crude_oil_futures"    : "CL=F",         # Crude Oil Futures ($)
-                           "natural_gas_futures"  : "NG=F",         # natural gas futures ($)
-                           "gold_futures"         : "GC=F",         # Gold Futures ($)
-                           "silver_futures"       : "SI=F",         # Silver Futures ($)
-                           "platinum_futures"     : "PL=F",         # Platinum Futures ($)
-                           "aluminium_futures"    : "ALI=F",        # aluminium futures ($)
-                           "lumber_futures"       : "LBS=F",        # lumber futures ($)
-                           "copper_futures"       : "HG=F",         # copper futures ($)
-                           "palladium_futures"    : "PA=F",         # palladium futures ($)
-                           "cotton_futures"       : "CT=F",         # cotton futures ($/100)
-                           "soybean_meal_futures" : "ZS=F",         # Soybean meal futures ($/100)
-                           "soybean_oil_futures"  : "ZL=F",         # Soybean oil futures ($/100)
-                           "corn_futures"         : "ZC=F",         # cordn futures ($/100)
-                           "wheat_futures"        : "ZW=F",         # wheat futures ($/100)
-                           "oat_futures"          : "ZO=F",         # oat futures ($/100)
-                           "rough_rice_futures"   : "ZR=F",         # rough rice futures ($)
-                           "sugar_futures"        : "SB=F",         # sugar futures ($/100)
-                           "cocoa_futures"        : "CC=F",         # cocoa futures ($)
-                           "coffee_futures"       : "KC=F",         # coffee futures ($/100)
-                           #"orange_juice_futures" : "OJ=F",         # orange juice futures ($/100)
-                           "live_cattle_futures"  : "LE=F",         # live cattle futures ($/100)
-                           "lean_hogs_futures"    : "HE=F",         # lean hogs futures ($/100)
-#------------------------- exchange rates
-                           "eur_gbp_exchange"     : "EURGBP=X",     # The Eur-GBP exchange rate
-                           "eur_chf_exchange"     : "EURCHF=X",     # The Eur-swiss franc exchange rate
-                           "eur_jpy_exchange"     : "EURJPY=X",     # The Eur-Japanese Yen exchange rate
-                           "gbp_jyp_exchange"     : "GBPJPY=X",     # The GBP-JPY exchange rate
-                           "usd_gbp_exchange"     : "GBP=X",        # The USD-GBP exchange rate
-                           "usd_eur_exchange"     : "EUR=X",        # The USD-Eur exchange rate
-                           "usd_cad_exchange"     : "CAD=X",        # The USD-canadian dollar exchange rate
-                           "usd_aud_exchange"     : "AUD=X",        # The USD-Australian dollar exchange rate
-                           "usd_mxn_exchange"     : "MXN=X",        # The USD-mexican peso exchange rate
-                           "usd_hkd_exchange"     : "HKD=X",        # The USD-hong kong dollar exchange rate
-                           "usd_jpy_exchange"     : "JPY=X",        # The USD-Japanese Yen exchange rate
-                          }
+yahoo_stock_name_to_ticker_map: {
+#------------------------------- market indexes
+                                 "sp_500"               : "^GSPC",        # The S&P 500 stock market index ($) - measures stock performance of 500 large companies on the US stock exchanges
+                                 "dow_jones"            : "^DJI",         # The Dow Jones Industrial Average ($) - stock market index measuring stock performance of 30 large companies on US stock exchanges
+                                 "vix"                  : "^VIX",         # VIX - The market's expectation of 30-day forward-looking volatility in S&P 500 options (Fear in Market)
+                                 "ftse_100"             : "^FTSE",        # UK Financial Times Stock Exchange 100 Index (£) - index compiled of the top 100 capitalized UK companies on the London Stock Exchange
+                                 "euro_stoxx_50"        : "^STOXX50E",    # The EURO STOXX 50 - index of Eurozone stocks that provide a blue-chip representation of Supersector leaders in the Eurozone
+                                 #"crypto_index"         : "^CMC200",      # The CMC Crypto 200 Index - deal with data of over 90% of the world’s crypto market
+                                 #"crypto_index_no_bit"  : "^CMC200EX",    # CMC Crypto 200 ex BTC Index – deal with data of over 90% of the world’s crypto market but does not include BTC. Monitor how market performs without Bitcoin
+                                 #"arca_steel_index"     : "^STEEL",       # The NYSE Arca Steel Index - market cap weighted index of companies involved primarily in the production of steel products or mining and processing of iron ore
+
+#------------------------------- exchange composites
+                                 "nasdaq_exchange"      : "^IXIC",        # The Nasdaq Composite ($) - stock market index that includes almost all stocks listed on the Nasdaq stock market
+                                 "new_york_exchange"    : "^NYA",         # The New York Stock Exchange Composite ($) - stock market index that includes all common stock listed on the NYSE
+                                 "amex_exchange"        : "^XAX",         # The AMEX NYSE Composite ($) - index of stocks that represent a portion of securities traded on the NYSE Amex exchange
+                                 "russell_2000"         : "^RUT",         # Russell 2000 Index ($)- small-cap stock market index of the smallest 2,000 stocks in the Russell 3000 Index which contains largest 3,000 US stocks
+                                 "euronext_100_euro"    : "^N100",        # Euronext 100 Index (€)- blue chip index comprised of largest & most liquid stocks. Each stock trades >20% its shares each year on pan-European exchange
+                                 "irish_exchange"       : "^ISEQ",        # ISEQ Overall Index (€) - index following all companies that trade on Euronext Dublin exchange
+                                 "singapore_exchange"   : "^STI",         # FTSE Straits Times Index (SGD) - capitalisation-weighted stock market index that is the benchmark index for the Singapore stock market
+                                 "buenos_aires_exchange": "^MERV",        # The S&P MERVAL Index - a price-weighted index of the Buenos Aires Stock Exchange
+                                 "taiwan_exchange"      : "^TWII",        # The Taiwan Capitalization Weighted Stock Index (TWD) - index for companies traded on the Taiwan Stock Exchange
+                                 "toronto_exchange"     : "^GSPTSE",      # The S&P/TSX Composite Index (CAD) - Canadian index representing 70% of the market cap on the Toronto Stock Exchange through about 250 companies
+                                 "mexican_exchange"     : "^MXX",         # The MXX index (MXN) - indicator of the Mexican economy through 35 stocks with each having a market value of at least $100 million dollars
+                                 "belgium_20"           : "^BFX",         # Belgium 20 stocks (€) -  the index consists 10 - 20 companies traded at the Brussels Stock Exchange
+                                 "turkey_bist_100"      : "XU100.IS",     # The Borsa Istanbul 100 Index (TRY) - a capitalization-weighted index of the 100 companies on the Istanbul Stock Exchange with the highest volume and market value
+                                 "german_dax"           : "^GDAXI",       # The Deutsch Boerse DAX Index (€) - blue chip stock market index consisting of the 30 major German companies trading on the Frankfurt Stock Exchange
+                                 "french_cac_40"        : "^FCHI",        # The CAC 40 (€) - capitalization-weighted measure of the 40 most significant stocks among the 100 largest market caps on the Euronext Paris
+                                 "spain_ibex_30"        : "^IBEX",        # The IBEX 35 (€) - market capitalization weighted index comprising the 35 most liquid Spanish stocks traded in the Madrid Stock Exchange General Index
+                                 "hong_kong_hang_seng"  : "^HSI",         # The Hang Seng Index (HKD) - freefloat-adjusted market-capitalization-weighted stock-market index of the largest companies of the Hong Kong stock market
+                                 "japan_nikkei_225"     : "^N225",        # The Nikkei 225 (JPN) - stock market index for the Tokyo Stock Exchange
+                                 "korean_kospi"         : "^KS11",        # The Korea Composite Stock Price Index (KRW) - index of all common stocks traded on the Stock Market Division—previously, Korea Stock Exchange—of the Korea Exchange  
+                                 #"egypt_30"             : "^CASE30",      # The CASE 30 (EGP) - index from Cairo & Alexandria Stock Exchange in Egypt. Includes the 30 most active stocks in the Egyptian stock market weighted by market capitalization
+                                 "australian_exchange"  : "^AORD",        # All Ordinaries exchange (AUD) - the oldest index of shares in Australia, containing the 500 largest companies listed on the Australian Securities Exchange
+                                 "australia_asx_200"    : "^AXJO",        # The S&P/ASX 200 index (AUD) - market-capitalization weighted and float-adjusted stock market index of stocks listed on the Australian Securities Exchange.
+                                 "santiago_exchange"    : "^IPSA",        # The S&P IPSA - measure the performance of the largest and most liquid stocks listed on the Santiago Exchange
+                                 "indonesia_exchange"   : "^JKSE",        # The IDX Composite - index of all stocks listed on the Indonesia Stock Exchange
+                                 #"johannesburg_exchange": "^JN0U.JO",     # The Top 40 USD Index - mirrors the Top 40 Index but is calculated using constituent prices valued in USD instead of ZAR. Minimum of 5%
+                                 #"quatar_exchange"      : "^QEAS.QA",     # Quatar all shares index - QE index measures the performance of all shares in the Qatar market
+                                }
+
+# the ticker values of the commodities to scrape from yahoo finance - these prices are based on the futures of the underlying commodity
+# Futures =  a legal agreement to buy or sell the items at this predetermined price in the next month
+yahoo_commodity_name_to_ticker_map: {
+                                     #"bloomberg_commodity_index_futures": "AW=F",         # The bloomberg commodity index futures ($)
+                                     "crude_oil_futures"    : "CL=F",         # Crude Oil Futures ($)
+                                     "natural_gas_futures"  : "NG=F",         # natural gas futures ($)
+                                     "gold_futures"         : "GC=F",         # Gold Futures ($)
+                                     "silver_futures"       : "SI=F",         # Silver Futures ($)
+                                     "platinum_futures"     : "PL=F",         # Platinum Futures ($)
+                                     "aluminium_futures"    : "ALI=F",        # aluminium futures ($)
+                                     "lumber_futures"       : "LBS=F",        # lumber futures ($)
+                                     "copper_futures"       : "HG=F",         # copper futures ($)
+                                     "palladium_futures"    : "PA=F",         # palladium futures ($)
+                                     "cotton_futures"       : "CT=F",         # cotton futures ($/100)
+                                     "soybean_meal_futures" : "ZS=F",         # Soybean meal futures ($/100)
+                                     "soybean_oil_futures"  : "ZL=F",         # Soybean oil futures ($/100)
+                                     "corn_futures"         : "ZC=F",         # cordn futures ($/100)
+                                     "wheat_futures"        : "ZW=F",         # wheat futures ($/100)
+                                     "oat_futures"          : "ZO=F",         # oat futures ($/100)
+                                     "rough_rice_futures"   : "ZR=F",         # rough rice futures ($)
+                                     "sugar_futures"        : "SB=F",         # sugar futures ($/100)
+                                     "cocoa_futures"        : "CC=F",         # cocoa futures ($)
+                                     "coffee_futures"       : "KC=F",         # coffee futures ($/100)
+                                     #"orange_juice_futures" : "OJ=F",         # orange juice futures ($/100)
+                                     "live_cattle_futures"  : "LE=F",         # live cattle futures ($/100)
+                                     "lean_hogs_futures"    : "HE=F",         # lean hogs futures ($/100)
+                                    }
+
+# the ticker values of the commodities to scrape from yahoo finance
+yahoo_currency_exchange_name_to_ticker_map: {
+                                             "eur_gbp_exchange"     : "EURGBP=X",     # The Eur-GBP exchange rate
+                                             "eur_chf_exchange"     : "EURCHF=X",     # The Eur-swiss franc exchange rate
+                                             "eur_jpy_exchange"     : "EURJPY=X",     # The Eur-Japanese Yen exchange rate
+                                             "gbp_jyp_exchange"     : "GBPJPY=X",     # The GBP-JPY exchange rate
+                                             "usd_gbp_exchange"     : "GBP=X",        # The USD-GBP exchange rate
+                                             "usd_eur_exchange"     : "EUR=X",        # The USD-Eur exchange rate
+                                             "usd_cad_exchange"     : "CAD=X",        # The USD-canadian dollar exchange rate
+                                             "usd_aud_exchange"     : "AUD=X",        # The USD-Australian dollar exchange rate
+                                             "usd_mxn_exchange"     : "MXN=X",        # The USD-mexican peso exchange rate
+                                             "usd_hkd_exchange"     : "HKD=X",        # The USD-hong kong dollar exchange rate
+                                             "usd_jpy_exchange"     : "JPY=X",        # The USD-Japanese Yen exchange rate
+                                            }
 
 # the ticker values of the economic data released by the federal reserve
 fred_tickers: {
@@ -250,7 +260,6 @@ db_nomics_countries: {
                       "belgium"     : "BE",
                       "denmark"     : "DK",
                       "sweden"      : "SE",
-
                      }
 
 db_nomics_eurostat_tickers_for_countries: {
@@ -287,7 +296,6 @@ db_nomics_eurostat_tickers_for_countries: {
                                            "gov_debt_all"                           : "Eurostat/gov_10dd_cgd/A.F21.S11.TOTAL.MIO_EUR.",
                                            "percent_afford_unexpected_expenses"     : "Eurostat/ilc_mdes04/A.PC.A1.A_MD60.",
                                            "trust_in_legal_system"                  : "Eurostat/ilc_pw03/A.RTG.TOTAL.LEGTST.T.Y_GE16.",
-
                                           }
 
 # the environment name used in twitter development to scrape the twitter data
