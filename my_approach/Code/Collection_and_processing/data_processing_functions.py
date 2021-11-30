@@ -1,9 +1,9 @@
 
-
 # general packages
 import pandas as pd
 from tqdm.auto import tqdm
 from pprint import pprint
+import os
 
 # for converting strings to dates
 from datetime import datetime
@@ -22,45 +22,131 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+
+
 # ================================================
-# |            CALCULATE DATE RANGE              |
+# |         READ IN THE INTERNAL DATA            |
 # ================================================
 
-def check_if_theres_a_row_for_every_day(df, min_date, max_date, interval_size_in_days):
+def read_raw_internal_data_into_list(data_directory, config_variables):
 
-    dates_with_error = []
-    for days_since_start, (_, row) in zip(range(interval_size_in_days), df.iterrows()):
-        if min_date + timedelta(days=days_since_start) != row["date"].date():
+    # unpack the variables needed for this scrape from the configuration dictionary
+    bitcoinity_features_list = config_variables["bitcoinity_features_list"]
 
-            print(min_date + timedelta(days=days_since_start), row["date"].date())
+    list_of_dfs = []
+    for file_name in [f for f in os.listdir(data_directory) if "raw_internal_data" in f]:
+        raw_data = pd.read_csv(os.path.join(data_directory, file_name))
+        
+        # for the bitcoinity data, merge the data values from the various exchanges into one column for each feature
+        df = merge_different_bitcoinity_exchanges_into_one_col(raw_data, bitcoinity_features_list) if "bitcoinity" in file_name else raw_data
 
-            dates_with_error.append((min_date + timedelta(days=days_since_start), row["date"].date()))
+        list_of_dfs.append(df)
 
-    return dates_with_error
+    return list_of_dfs
 
 
-def get_date_range_of_data(df):
+def merge_different_bitcoinity_exchanges_into_one_col(df, list_of_features):
 
-    """
-    Take in a dataframe with a date column and output the span of the data range in this dataframe
+    # set up the dataframe with the merged features as columns
+    condensed_features_df = pd.DataFrame(columns=["date"] + list_of_features)
 
-    Parameters:
-        df (dataframe) : A pandas dataframe that has a columns called "date"
+    # add the date column to this dataframe
+    condensed_features_df["date"] = df["date"]
 
-    Returns:
-        None
-    """
+    # iterate over the other columns and add these too the dataframe
+    merged_cols = ["date"]
+    for feature in list_of_features:
+        # get a list of all the columns associated with the specified feature
+        different_exchange_cols = list(df.filter(like=feature, axis=1).columns)
+        merged_cols.extend(different_exchange_cols)
 
-    min_date = datetime.strptime(min(df["date"]), '%Y-%m-%d').date()
-    max_date = datetime.strptime(max(df["date"]), '%Y-%m-%d').date()
-    interval_size_in_days = int(str(max_date - min_date).split(",")[0].split(" ")[0])
+        if feature != 'rank':
+            # average the values in this column to form one column
+            condensed_features_df[feature] = df[different_exchange_cols].mean(axis=1)
+        else:
+            condensed_features_df.drop(columns=[feature], inplace=True)
+            condensed_features_df[different_exchange_cols] = df[different_exchange_cols]
 
-    print("Scraped {} days of data - from '{}' to '{}'".format(interval_size_in_days, min_date, max_date))
+    # check if there were any columns in the dataframe that werent covered by the list of features
+    cols_not_in_feat_list = []
+    for col in df.columns:
+        if col not in merged_cols:
+            cols_not_in_feat_list.append(col)
+    if cols_not_in_feat_list:
+        print("The following columns were dropped from the dataframe during this step as they didn't have an associated feature:")
+        print(cols_not_in_feat_list)
 
-    if interval_size_in_days != len(df) - 1:
-        dates_with_error = check_if_theres_a_row_for_every_day(df, min_date, max_date, interval_size_in_days)
-        print("The following dates had a problem in them:")
-        print(dates_with_error)
+    return condensed_features_df
+
+
+def merge_dfs_on_col(list_of_dfs, col):
+
+    # merge the dataframes on the specified column
+    merged_df = list_of_dfs[0]
+    for df in list_of_dfs[1:]:
+        merged_df = pd.merge(merged_df, df, on=col, how="outer")
+
+    # return the dataframe
+    return merged_df
+
+
+def merge_internal_dfs(list_of_dfs, config_variables):
+
+    # Merge the dataframes
+    merged_df = merge_dfs_on_col(list_of_dfs, "date")
+        
+    # sort the df by the date
+    sorted_merged_df = merged_df.sort_values("date").reset_index(drop=True)
+
+    # turn the same feature columns from both these data sources into one column
+    cols_to_join = config_variables["bitcoin_internal_data_cols_to_join"]
+    for col_name, (c1, c2) in cols_to_join.items():
+        sorted_merged_df[col_name] = sorted_merged_df[[c1, c2]].mean(axis=1)
+        sorted_merged_df.drop(columns=[c1, c2], inplace=True)
+
+    return sorted_merged_df
+
+
+
+# ================================================
+# |             READ DATA INTO LIST              |
+# ================================================
+
+def read_data_into_list(data_directory, name_in_filename):
+
+    list_of_dfs = []
+    for file_name in [f for f in os.listdir(data_directory) if name_in_filename in f]:
+        df = pd.read_csv(os.path.join(data_directory, file_name))
+        list_of_dfs.append(df)
+
+    return list_of_dfs
+
+
+
+# ================================================
+# |             FILL MISSING VALUES              |
+# ================================================
+
+def fill_in_missing_values(df):
+
+    # fill the 'NaN' volume values with '0'
+    volume_cols = [c for c in df.columns if ("volume" in c)]
+    volume_df = df.loc[:, volume_cols]
+    filled_volume_df = volume_df.fillna(value=0, axis=0)
+
+    # forward fill the 'NaN' values in the other columns
+    other_cols = [c for c in df.columns if ("volume" not in c)]
+    other_df = df.loc[:, other_cols]
+    filled_other_df = other_df.fillna(method='ffill', axis=0)
+
+    # join these two dataframes back together into one filled df
+    filled_df = pd.concat([filled_volume_df, filled_other_df], axis=1)
+
+    # put the columns in this filled df back in the original order
+    ordered_cols_filled_df = filled_df[list(df.columns)]
+
+    # return the dataframe
+    return ordered_cols_filled_df
 
 
 
@@ -68,76 +154,18 @@ def get_date_range_of_data(df):
 # |                 CHECK NANS                   |
 # ================================================
 
-def is_nan(val):
-    """
-    Check if a value is 'Nan'
-
-    Params:
-        val: any type - can be a variable of any datatype
-
-    Return:
-        Boolean: Whether the value is an 'Nan' value or not
-    """
-    return val != val
-
-
-def get_cols_with_nan(df):
-
-    nan_cols = []
-    for col in df.columns:
-        any_nan = df[col].isnull().values.any()
-        if any_nan:
-            nan_cols.append(col)
-
-    return nan_cols
-
-
-def find_col_nan_ranges(df, output=True):
-
-    # get the columns that contain an 'nan' value
-    nan_cols = get_cols_with_nan(df)
-
-    col_to_nan_dates = {}
-    for col in tqdm(nan_cols):
-        prev_was_nan = False
-        for index, row in df.iterrows():
-            if is_nan(row[col]) and not prev_was_nan:
-                prev_was_nan = True
-                if "date" in row:
-                    nan_start_date = str(row["date"])
-                else:
-                    nan_start_date = str(index)
-
-            elif not is_nan(row[col]) and prev_was_nan:
-                prev_was_nan = False
-                if "date" in row:
-                    nan_end_date = str(row["date"])
-                else:
-                    nan_end_date = str(index)
-
-                if col in col_to_nan_dates:
-                    col_to_nan_dates[col].append((nan_start_date, nan_end_date))
-                else:
-                    col_to_nan_dates[col] = [(nan_start_date, nan_end_date)]
-                    
-    # print these columns
-    if output:
-        print("---------------------------------------------------------------------")
-        print("{} columns had a 'NaN' value in them:".format(len(nan_cols)))
-        pprint(nan_cols)
-        print("---------------------------------------------------------------------")
-        print("The date ranges in these columns where the NaN's are located are:")
-        pprint(col_to_nan_dates)
-
-    return col_to_nan_dates
-
-
 def find_the_latest_date_each_column_starts(nan_col_dates, n_cols_to_print):
+
+    # check if there are no nan cols
+    if not nan_col_dates:
+        print("There are no NaN columns in this dataset")
+        return
 
     # store when each column starts (stops being NaN)
     nan_date_list = []
     nan_col_list = []
     for col, date_list in nan_col_dates.items():
+        # Ensure all NaN values except those at the start have been filled
         if len(date_list) > 1:
             print(col)
             print(date_list)
@@ -150,12 +178,37 @@ def find_the_latest_date_each_column_starts(nan_col_dates, n_cols_to_print):
     sorted_dates, sorted_cols = zip(*sorted(zip(nan_date_list, nan_col_list)))
 
     # output these columns to see what are the latest dates that the columns start
-    cols_printed = 0
-    for d, c in zip(sorted_dates[::-1], sorted_cols[::-1]):
-        if cols_printed == n_cols_to_print:
+    max_lenth_col = len(max(sorted_cols, key=len))
+    for i, (d, c) in enumerate(zip(sorted_dates[::-1], sorted_cols[::-1])):
+        if i == n_cols_to_print:
             break
-        print(c, "-->", d)
-        cols_printed += 1
+        print(c.ljust(max_lenth_col), "-->", d)
+
+
+
+# ================================================
+# |             MERGING DATA SOURCES             |
+# ================================================
+
+
+def read_in_all_data_and_merge_it(data_directory, list_of_files, start_date):
+    
+    # iterate through each file
+    merged_df = pd.DataFrame()
+    for file in list_of_files:
+
+        # read in the data
+        filepath = os.path.join(data_directory, file)
+        df = pd.read_csv(filepath)
+
+        # set the date to its index
+        df = df.set_index("date")
+
+        # add this data to a dataframe of all the data
+        merged_df = pd.merge(merged_df, df, left_index=True, right_index=True, how="outer")
+
+    # return the dataframe with the date as its own columns
+    return merged_df.reset_index()
 
 
 
@@ -181,7 +234,7 @@ def create_cyclical_day_features(df):
 def create_cyclical_month_features(df):
 
     # get the month that each day is in
-    month = df["date"].apply(lambda date: date.split("-")[1])
+    month = df["date"].apply(lambda date: str(date).split("-")[1])
     seen_months = {}
     new_month_list = []
     last_month = 0
@@ -196,8 +249,8 @@ def create_cyclical_month_features(df):
 
         # save the value for this month
         new_m = m + (12 * seen_months[m])
-        last_month = m
         new_month_list.append(new_m)
+        last_month = m
 
     # create a list of integers, one for each month in the dataframe
     num_for_each_month = np.array(new_month_list)
@@ -301,3 +354,42 @@ def create_correlation_plot(features_df):
     #print("3. Figure defined")
     
     #sns.heatmap(corr, mask=mask, cmap='coolwarm', annot=True, fmt='.2f')
+
+
+def get_feature_correlation_table(correlation_matrix):
+    
+    # use the correlation table to get a sorted list of the most correlated feature pairs
+    full_sorted_correlation_df = pd.DataFrame(correlation_matrix.unstack().sort_values(kind="quicksort", ascending=True)).reset_index()
+
+    # rename the columns
+    full_sorted_correlation_df.columns = ["feat_1", "feat_2", "correlation"]
+
+    # remove feature correlations where the correlation value is NaN
+    no_nan_df = full_sorted_correlation_df[full_sorted_correlation_df["correlation"].notna()]
+
+    # remove feature correlations with itself
+    removed_self_corr = no_nan_df[no_nan_df["feat_1"] != no_nan_df["feat_2"]]
+
+    # create new column with the sorted values of the two features
+    removed_self_corr['sorted_feat'] = [str(sorted([a,b])) for a,b in zip(removed_self_corr["feat_1"], removed_self_corr["feat_2"])]
+    
+    # drop columns with duplicate values for this sorted features column
+    unique_df = removed_self_corr.drop_duplicates(subset=['sorted_feat']).reset_index(drop=True)
+    
+    # return the df with the added column removed
+    return unique_df.drop(columns=["sorted_feat"])
+
+
+def count_corr_features_over_threshold(correlation_df, threshold=0.99):
+
+    # get the correlated rows over the threshold
+    neg_df = correlation_df[correlation_df["correlation"] < -threshold]
+    pos_df = correlation_df[correlation_df["correlation"] > threshold].iloc[::-1].reset_index(drop=True)
+
+    # count these rows
+    print("{} feature pairs had a negative correlation over -{}".format(len(neg_df), threshold))
+    print("{} feature pairs had a positive correlation over {}".format(len(pos_df), threshold))
+
+    # return these df rows over the threshold
+    return neg_df, pos_df
+

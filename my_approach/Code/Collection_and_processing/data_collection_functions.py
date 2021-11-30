@@ -5,7 +5,6 @@ from tqdm.auto import tqdm
 import time
 import os
 import sys
-from pprint import pprint
 import numpy as np
 
 # packages for getting bitcoin internal data - bitcoinity
@@ -36,64 +35,12 @@ import re
 import tweepy
 from tweepy import OAuthHandler
 from textblob import TextBlob
-import twint
-
-
-
-def check_if_theres_a_row_for_every_day(df, min_date, max_date, interval_size_in_days):
-
-    dates_with_error = []
-    for days_since_start, (_, row) in zip(range(interval_size_in_days), df.iterrows()):
-        if min_date + timedelta(days=days_since_start) != row["date"].date():
-
-            print(min_date + timedelta(days=days_since_start), row["date"].date())
-
-            dates_with_error.append((min_date + timedelta(days=days_since_start), row["date"].date()))
-
-    return dates_with_error
-
-
-def get_date_range_of_data(df):
-
-    """
-    Take in a dataframe with a date column and output the span of the data range in this dataframe
-
-    Parameters:
-        df (dataframe) : A pandas dataframe that has a columns called "date"
-
-    Returns:
-        None
-    """
-
-    min_date = min(df["date"]).date()
-    max_date = max(df["date"]).date()
-    interval_size_in_days = int(str(max_date - min_date).split(",")[0].split(" ")[0])
-
-    print("Scraped {} days of data - from '{}' to '{}'".format(interval_size_in_days, min_date, max_date))
-
-    if interval_size_in_days != len(df) - 1:
-        dates_with_error = check_if_theres_a_row_for_every_day(df, min_date, max_date, interval_size_in_days)
-        print("The following dates had a problem in them:")
-        print(dates_with_error)
 
 
 
 # ================================================
 # |                 CHECK NANS                   |
 # ================================================
-
-def is_nan(val):
-    """
-    Check if a value is 'Nan'
-
-    Params:
-        val: any type - can be a variable of any datatype
-
-    Return:
-        Boolean: Whether the value is an 'Nan' value or not
-    """
-    return val != val
-
 
 def get_cols_with_nan(df):
 
@@ -106,84 +53,166 @@ def get_cols_with_nan(df):
     return nan_cols
 
 
-def find_col_nan_ranges(df, output=True):
+def find_col_nan_ranges(df):
 
     # get the columns that contain an 'nan' value
-    nan_cols = get_cols_with_nan(df)
+    nan_cols = sorted(get_cols_with_nan(df))
+    print("{}/{} columns had a 'NaN' value in them".format(len(nan_cols), len(df.columns)))
 
+    # ensure the index is the date
+    if "date" in df.columns:
+        df = df.set_index("date")
+    df.index = pd.to_datetime(df.index)
+
+    # create a df of whether the value is NaN or not
+    is_null_df = pd.DataFrame(np.where(df[nan_cols].isnull(), 1, 0), columns=nan_cols, index=df.index)
+
+    # Add a row at the beginning and and end of this df saying the day was not null
+    is_null_df = is_null_df.append(pd.DataFrame(np.zeros((1, len(nan_cols))), columns=nan_cols, index=[min(is_null_df.index) - timedelta(days=1)])).sort_index()
+    is_null_df = is_null_df.append(pd.DataFrame(np.zeros((1, len(nan_cols))), columns=nan_cols, index=[max(is_null_df.index) + timedelta(days=1)])).sort_index()
+
+    # Define where the first and last Nan's appear
+    null_start_df = pd.DataFrame(np.where(is_null_df > is_null_df.shift(1), 1, 0)[1:-1], columns=nan_cols, index=df.index)
+    null_end_df = pd.DataFrame(np.where(is_null_df > is_null_df.shift(-1), 1, 0)[1:-1], columns=nan_cols, index=df.index)
+
+    # Extract where the Nan's start and end for each column
     col_to_nan_dates = {}
     for col in tqdm(nan_cols):
-        prev_was_nan = False
-        for index, row in df.iterrows():
-            if is_nan(row[col]) and not prev_was_nan:
-                prev_was_nan = True
-                if "date" in row:
-                    nan_start_date = str(row["date"].date())
-                else:
-                    nan_start_date = str(index)
+        start_dates = null_start_df[null_start_df[col] == 1].index
+        end_dates = null_end_df[null_end_df[col] == 1].index
 
-            elif not is_nan(row[col]) and prev_was_nan:
-                prev_was_nan = False
-                if "date" in row:
-                    nan_end_date = str(row["date"].date())
-                else:
-                    nan_end_date = str(index)
+        assert len(start_dates) == len(end_dates)
 
-                if col in col_to_nan_dates:
-                    col_to_nan_dates[col].append((nan_start_date, nan_end_date))
-                else:
-                    col_to_nan_dates[col] = [(nan_start_date, nan_end_date)]
-                    
-    # print these columns
-    if output:
-        print("---------------------------------------------------------------------")
-        print("{} columns had a 'NaN' value in them:".format(len(nan_cols)))
-        pprint(nan_cols)
-        print("---------------------------------------------------------------------")
-        print("The date ranges in these columns where the NaN's are located are:")
-        pprint(col_to_nan_dates)
+        col_to_nan_dates[col] = []
+        for nan_start_date, nan_end_date in zip(start_dates, end_dates):
+            col_to_nan_dates[col].append((str(nan_start_date.date()), str(nan_end_date.date())))
 
     return col_to_nan_dates
+
+
+def print_nan_cols(nan_col_dates_dict, num_cols):
+
+    # get a list of the columns
+    nan_cols = list(nan_col_dates_dict.keys())
+
+    # print these columns
+    if num_cols == 1:
+        for a in nan_cols:
+            print(a)
+    elif num_cols == 2:
+        for a,b in zip(nan_cols[::2], nan_cols[1::2]):
+            print('{:<50}{:<}'.format(a, b))
+    elif num_cols == 3:
+        for a,b,c in zip(nan_cols[::3], nan_cols[1::3], nan_cols[2::3]):
+            print('{:40}{:<40}{:<}'.format(a, b, c))
+    elif num_cols == 4:
+        for a,b,c,d in zip(nan_cols[::4], nan_cols[1::4], nan_cols[2::4], nan_cols[3::4]):
+            print('{:30}{:<30}{:<30}{:<}'.format(a, b, c, d))
+
+
+
+# ================================================
+# |            FINALISE SCRAPED DATA             |
+# ================================================
+
+def output_data_date_range_summary(df):
+
+    """
+    Take in a dataframe with a date as it's index and output the span of the non-null data in this dataframe
+
+    Parameters:
+        df (dataframe) : A pandas dataframe that has a "date" index
+
+    Returns:
+        None
+    """
+
+    # get the min and max dates in this df
+    non_null_rows = df[df.notna().any(axis=1)]
+
+    # Find the min and max date in this non-null df
+    min_date = min(non_null_rows.index).date()
+    max_date = max(non_null_rows.index).date()
+    interval_size_in_days = int(str(max_date - min_date).split(",")[0].split(" ")[0])
+
+    print("The data scraped is from '{}' to '{}' - During this {} day period, there were {} non-null rows".format(min_date, max_date, interval_size_in_days, len(non_null_rows)))
+
+
+def re_index_df_to_have_row_for_each_date(df, start_date):
+
+    # get yesterdays date as a string
+    yesterday = datetime.strftime(datetime.now() - timedelta(1), '%Y-%m-%d')
+
+    # drop any data from the input df that appears before the start date
+    if start_date < str(min(df.index)):
+        df = df.loc[datetime.strptime(start_date, "%Y-%m-%d").date():, :]
+
+    # drop any data from the input df for today
+    if yesterday > str(min(df.index)):
+        df = df.loc[datetime.strptime(yesterday, "%Y-%m-%d").date():, :]
+
+    # create an index going from the start date till yesterday
+    index = pd.date_range(start_date, yesterday)
+
+    # reindex the input df to have a row for each day between start date and yesterday
+    return df.reindex(index, fill_value=np.nan)
+
+
+def replace_invalid_vals_in_df(input_df):
+
+    # define the values to replace
+    replace_dict = {"NA": np.nan,
+                    "None": np.nan,
+                    "NaN": np.nan,
+                    "none": np.nan,
+                    "nan": np.nan,
+                    "na": np.nan,
+                    "null": np.nan,
+                    "Null": np.nan,
+                   }
+
+    # iterate through these alues and replace them
+    df = input_df.copy()
+    for k, v in replace_dict.items():
+        df = df.replace(k, v)
+
+    return df
+
+
+def finalise_df_types(input_df, start_date, date_colname="date"):
+
+    # replace invalid values in the dataframe with NaNs
+    df = replace_invalid_vals_in_df(input_df)
+
+    # turn the index into a date column if the date column isn't in the dataframe
+    if date_colname not in df.columns:
+        df.index.names = [date_colname]
+        df = df.reset_index()
+
+    # change the data type of the columns (except date) to numeric
+    for col in df.drop(columns=[date_colname]):
+        df[col] = pd.to_numeric(df[col])
+    
+    # make the date column a datetime, order the rows, and set it as the index
+    df[date_colname] = pd.to_datetime(df[date_colname])
+    sorted_df = df.sort_values([date_colname]).reset_index(drop=True).set_index(date_colname)
+
+    # Ensure there is a row for each day in this data, fill missing values with 'np.nan'
+    all_dates_df = re_index_df_to_have_row_for_each_date(sorted_df, start_date)
+
+    # drop any columns which are all 'NaN'
+    subset_df = all_dates_df.drop(columns=all_dates_df.columns[all_dates_df.isna().all(axis=0)].to_list())
+
+    # print the date range of this data
+    output_data_date_range_summary(subset_df)
+
+    return subset_df
 
 
 
 # ================================================
 # |               BITCOINITY.ORG                 |
 # ================================================
-
-def merge_different_exchanges_into_one_col(df, list_of_features):
-
-    # set up the dataframe with the merged features as columns
-    condensed_features_df = pd.DataFrame(columns=["date"] + list_of_features)
-
-    # add the date column to this dataframe
-    condensed_features_df["date"] = df["date"]
-
-    # iterate over the other columns and add these too the dataframe
-    merged_cols = ["date"]
-    for feature in list_of_features:
-        # get a list of all the columns associated with the specified feature
-        different_exchange_cols = list(df.filter(like=feature, axis=1).columns)
-        merged_cols.extend(different_exchange_cols)
-
-        if feature != 'rank':
-            # average the values in this column to form one column
-            condensed_features_df[feature] = df[different_exchange_cols].mean(axis=1)
-        else:
-            condensed_features_df.drop(columns=[feature], inplace=True)
-            condensed_features_df[different_exchange_cols] = df[different_exchange_cols]
-
-    # check if there were any columns in the dataframe that werent covered by the list of features
-    cols_not_in_feat_list = []
-    for col in df.columns:
-        if col not in merged_cols:
-            cols_not_in_feat_list.append(col)
-    if cols_not_in_feat_list:
-        print("The following columns were dropped from the dataframe during this step as they didn't have an associated feature:")
-        print(cols_not_in_feat_list)
-
-    return condensed_features_df
-
 
 def read_exported_csvs_into_df(num_csvs, metric_names, downloads_folder):
     
@@ -390,7 +419,7 @@ def get_blockchain_data(driver, downloads_folder):
     return blockchain_data_df
 
 
-def scrape_bitcoinity_data(data_directory, config_variables, merge_exchanges):
+def scrape_bitcoinity_data(data_directory, config_variables, start_date):
     
     """
     Open a Google Chrome tab on the bitcoinity.org website and scrape the data
@@ -411,30 +440,20 @@ def scrape_bitcoinity_data(data_directory, config_variables, merge_exchanges):
     market_data = get_market_data(driver, downloads_folder)
     blockchain_data = get_blockchain_data(driver, downloads_folder)
     
+    # close the browser
+    driver.close()
+
     # merge these into one dataframe
     full_df = pd.merge(market_data, blockchain_data, on="date", how="outer")
     
-    # make the date column a datetime and order the rows
-    full_df["date"] = pd.to_datetime(full_df["date"])
-    ordered_full_df = full_df.sort_values(["date"]).reset_index(drop=True)
-    
-    # change the other columns to numeric
-    for col in ordered_full_df.drop(columns=["date"]):
-        ordered_full_df[col] = pd.to_numeric(ordered_full_df[col])
+    # finalise the types of the datframe
+    final_df = finalise_df_types(full_df, start_date, date_colname="date")
 
-    # merge the data values from the various exchanges into one column for each feature
-    ordered_merged_cols_df = merge_different_exchanges_into_one_col(ordered_full_df, bitcoinity_features_list)
-    
-    # output the full and merged data to csv's
-    ordered_full_df.to_csv(os.path.join(data_directory, "full_bitcoinity_internal_data.csv"), index=False)
-    ordered_merged_cols_df.to_csv(os.path.join(data_directory, "merged_cols_bitcoinity_internal_data.csv"), index=False)
-
-    final_df = ordered_merged_cols_df if merge_exchanges else ordered_full_df
-
-    # print the date range of this data
-    get_date_range_of_data(final_df)
+    # output the full data to a csv
+    final_df.to_csv(os.path.join(data_directory, "bitcoinity_raw_internal_data.csv"), index_label="date")
 
     return final_df
+
 
 
 # ================================================
@@ -494,7 +513,6 @@ def generate_urls(part_url, features_list, indicator_list, period_list, scrape_t
     for feature in features_list:
         
         # ==== Get the URLs for the raw values ====
-        
         # get the URL
         url = '{}/{}-btc.html'.format(part_url, feature)
         url_list.append(url)
@@ -522,7 +540,7 @@ def generate_urls(part_url, features_list, indicator_list, period_list, scrape_t
     return feature_name_list, url_list
 
 
-def scrape_bitinfocharts_data(data_folder, config_variables, start_date='2000/01/01', end_date='2050/01/01', include_technichal_indicators=True, output_features=False):
+def scrape_bitinfocharts_data(data_folder, config_variables, start_date, include_tech_ind=True, output_features=False):
     
     '''
     Scrape the data from the bitinfocharts website, this can be all bitcoin data or just data between certain dates
@@ -530,9 +548,9 @@ def scrape_bitinfocharts_data(data_folder, config_variables, start_date='2000/01
     Parameters:
         config_variables:
         data_folder:
-        start_date: date string - A string of the minimum date to be in the scraped data - format = YYYY/MM/DD
-        end_date: date string - A string of the maximum date to be in the scraped data - format = YYYY/MM/DD
-        include_technichal_indicators: Boolean - Whether we want the technichal indicators to be scraped or not
+        start_d: date string - A string of the minimum date to be in the scraped data - format = YYYY/MM/DD
+        end_d: date string - A string of the maximum date to be in the scraped data - format = YYYY/MM/DD
+        include_tech_ind: Boolean - Whether we want the technichal indicators to be scraped or not
         output_features: Boolean - Whether we want a csv of each feature's data to be output after it is scraped
         
     Returns:
@@ -549,18 +567,13 @@ def scrape_bitinfocharts_data(data_folder, config_variables, start_date='2000/01
 
     # generate the url's needed to scrape the data from this website
     start_of_bitinfocharts_url = 'https://bitinfocharts.com/comparison'
-    feature_name_list, url_list = generate_urls(start_of_bitinfocharts_url, features_list, indicator_list, period_list, include_technichal_indicators)
-    
-    num_features = len(feature_name_list)
+    feature_name_list, url_list = generate_urls(start_of_bitinfocharts_url, features_list, indicator_list, period_list, include_tech_ind)
     
     # The most important thing getting the data from the website is: DONT ABUSE IT
     # You might be IP banned for requesting a lot
     
-    for i in tqdm(range(len(feature_name_list))):
-        
-        feature = feature_name_list[i]
-        url = url_list[i]
-        
+    for i, (feature, url) in tqdm(enumerate(zip(feature_name_list, url_list)), total=len(feature_name_list)):
+
         # access the website
         session = requests.Session()
         retry = Retry(connect=10, backoff_factor=3)
@@ -575,43 +588,25 @@ def scrape_bitinfocharts_data(data_folder, config_variables, start_date='2000/01
         # get the time series values - extract them from the messy string
         html_string = str(soup.find_all('script')[4])
         values = extract_the_chart_values_from_the_html_string(html_string)
-            
+
         # crate a dataframe of this data - |date|value|
         list_of_all_vals = [str_val.split('|') for str_val in values.split(',')]
         feature_df = pd.DataFrame(list_of_all_vals, columns=['date', feature])
 
-        # Get a subset of this data using the specified date range        
-        subset_feature_df = feature_df.loc[(feature_df['date'] >= start_date) & (feature_df['date'] <= end_date)]
-        
         # add this df to the df with the rest of the features
-        if i == 0:
-            # create a datafame to hosue all the features
-            all_features_df = subset_feature_df
-            
-        else:
-            all_features_df = pd.merge(all_features_df, subset_feature_df, on="date", how="outer")
+        all_features_df = feature_df if (i == 0) else pd.merge(all_features_df, feature_df, on="date", how="outer")
 
         if output_features:
             # output this features data as a csv
-            subset_feature_df.to_csv(os.path.join(feature_output_directory, feature + '.csv'), sep=',', columns=[feature], index=False)
+            feature_df.to_csv(os.path.join(feature_output_directory, feature + '.csv'), sep=',', columns=[feature], index=False)
 
-    # make the date column a timestamp
-    all_features_df["date"] = pd.to_datetime(all_features_df["date"])
-    
-    # change the other columns to numeric
-    for col in all_features_df.drop(columns=["date"]):
-        all_features_df[col] = pd.to_numeric(all_features_df[col].replace(['null'], [None]))
+    # finalise the types of the datframe
+    final_df = finalise_df_types(all_features_df, start_date, date_colname="date")
 
-    # order the data by the date column
-    sorted_df = all_features_df.sort_values('date').reset_index(drop=True)
-    
     # output the data to a CSV
-    sorted_df.to_csv(os.path.join(data_folder, "bitinfocharts_internal_data.csv"), index=False)
+    final_df.to_csv(os.path.join(data_folder, "bitinfocharts_raw_internal_data.csv"), index_label="date")
 
-    # print the date range of this data
-    get_date_range_of_data(sorted_df)
-
-    return sorted_df
+    return final_df
 
 
 
@@ -620,7 +615,7 @@ def scrape_bitinfocharts_data(data_folder, config_variables, start_date='2000/01
 # ================================================
 
 
-def merge_stock_data_to_one_df(stock_name_to_data):
+def merge_individual_yahoo_data_to_one_df(stock_name_to_data):
 
     full_df = pd.DataFrame()
     for stock_name, stock_df in stock_name_to_data.items():
@@ -631,45 +626,7 @@ def merge_stock_data_to_one_df(stock_name_to_data):
     return full_df
 
 
-def fill_in_weekend_values(df, stock_name):
-
-    # find the max and min values in the dataframe
-    min_date = min(df.index)
-    max_date = datetime.now().date()
-    date_range = pd.date_range(start=min_date, end=max_date)
-
-    # iterate over this date range and add weekend values
-    all_days_df = df.copy()
-    for date in date_range:
-        date = date.date()
-        # if the market was closed on this day so there is no data  
-        if date not in df.index:
-            # create a data row with the values from the previous open day
-            cols_in_df = [stock_name+"_open", stock_name+"_high", stock_name+"_low", stock_name+"_close"]
-            row_dict = {}
-            for col in cols_in_df:
-                if col in all_days_df:
-                    row_dict[col] = last_close
-            if stock_name+"_volume" in all_days_df:
-                row_dict[stock_name+"_volume"] = 0
-            row = pd.DataFrame(row_dict, index=[date])
-
-            # add this row to a dataframe wth all dates
-            all_days_df = all_days_df.append(row)
-
-        else:
-            # this is a weekday
-            last_close = df.loc[date, stock_name+"_close"]
-
-    # return the dataframe sorted by the index
-    return all_days_df.sort_index()
-
-
-def scrape_stock_from_yahoo_finance(data_directory, name_to_ticker_map, start_date):
-
-    # scrape one month prior to the start date - helps when filling the data
-    y, m, d = start_date.split("-")
-    new_start_date = "-".join([y if int(m) > 1 else str(int(y)-1), str(int(m)-1 if int(m) > 1 else 12), d])
+def scrape_yahoo_finance_data(data_directory, name_to_ticker_map, start_date, data_name):
 
     stock_name_to_data = {}
     for stock_name, ticker_val in tqdm(name_to_ticker_map.items()):
@@ -678,39 +635,28 @@ def scrape_stock_from_yahoo_finance(data_directory, name_to_ticker_map, start_da
         ticker_data = yf.Ticker(ticker_val)
         
         # get historic data
-        ticker_hist = ticker_data.history(start=new_start_date)
+        ticker_hist = ticker_data.history(start=start_date)
 
         # turn columns to lowercase, remove_spaces & add the stock name as a prefix
         ticker_hist.columns = [stock_name + "_" + c.lower().replace(' ', '_') for c in ticker_hist.columns]
         
-        # remove the timestamp from the date index
-        ticker_hist.index = ticker_hist.index.date
-        ticker_hist.index = ticker_hist.index.rename("date")
-        
         # remove columns that are all zeros or all 'nan'
         zero_cols = []
         for col in ticker_hist.columns:
-            if ((ticker_hist[col] == 0).all()) or (is_nan(ticker_hist[col]).all()):
+            if ((ticker_hist[col] == 0).all()) or (ticker_hist[col].isnull().all()):
                 zero_cols.append(col)
-        non_zero_df = ticker_hist.drop(columns=zero_cols)
-        
-        # fill in the weekend values of this dataframe
-        all_days_df = fill_in_weekend_values(non_zero_df, stock_name)
 
-        # store in a dictionary
-        stock_name_to_data[stock_name] = all_days_df
+        # store in a dictionary  
+        stock_name_to_data[stock_name] = ticker_hist.drop(columns=zero_cols)
 
-    # merge the data from these different tables into one dataframe
-    merged_stock_df = merge_stock_data_to_one_df(stock_name_to_data)
+    # merge the data from these different tables into one dataframe using the date indexes
+    merged_stock_df = merge_individual_yahoo_data_to_one_df(stock_name_to_data)
 
-    # remove the one month previous worth of data
-    final_df = merged_stock_df.loc[datetime.strptime(start_date, "%Y-%m-%d").date():, :]
-
-    # rename the index
-    final_df.index.rename("date", inplace=True)
+    # finalise the types of the datframe
+    final_df = finalise_df_types(merged_stock_df, start_date, date_colname="date")
 
     # output the data to a CSV
-    final_df.to_csv(os.path.join(data_directory, "yahoo_stock_data.csv"))
+    final_df.to_csv(os.path.join(data_directory, "yahoo_{}_data.csv".format(data_name)), index_label="date")
 
     return final_df
 
@@ -763,83 +709,34 @@ def scrape_fed_economic_data_codes(config_variables):
     return name_to_index
 
 
-def replace_invalid_vals_in_df(input_df):
-
-    # define the values to replace
-    replace_dict = {"NA": np.nan,
-                    "None": np.nan,
-                    "NaN": np.nan,
-                    "none": np.nan,
-                    "nan": np.nan,
-                    "na": np.nan,
-                   }
-
-    # iterate through these alues and replace them
-    df = input_df.copy()
-    for k, v in replace_dict.items():
-        df = df.replace(k, v)
-
-    return df
-
-
-def fill_in_days_between_economic_readings(input_df):
-
-    # replace invalid values in the dataframe with NaNs
-    df = replace_invalid_vals_in_df(input_df)
-
-    # find the max and min values in the dataframe
-    min_date = min(df.index)
-    max_date = datetime.now().date()
-    date_range = pd.date_range(start=min_date, end=max_date)
-
-    # create a blank dataframe with a date for each day in this range
-    date_for_each_day_df = pd.DataFrame(index=[d.date() for d in date_range])
-
-    # add the input dataframe data to this daily dataframe
-    full_df = pd.concat([date_for_each_day_df, df], axis=1)
-
-    # fill the 'nan' values in this df by carrying the reading values forward till the next reading
-    filled_df = full_df.fillna(method='ffill')
-
-    return filled_df
-
-
 def scrape_fred_indicators(data_directory, fred_indicator_tickers, start_date):
     
+    # define the quandl API key
+    quandl.ApiConfig.api_key = os.environ.get('QUANDL_API_KEY')
+
     # get todays date
     todays_date = datetime.today().strftime('%Y-%m-%d')
-
-    # scrape three months prior to the start date - helps when filling the data
-    y, m, d = start_date.split("-")
-    new_month = int(m)-3 if int(m) > 3 else (12 if int(m) == 3 else (11 if int(m) == 2 else 10))
-    new_start_date = "-".join([y if int(m) > 3 else str(int(y)-1), str(new_month), d])
 
     # iterate through the tickers and put them in a df
     fred_df = pd.DataFrame()
     for indicator_name, fred_ticker in tqdm(fred_indicator_tickers.items()):
         # read the data from the start date till todays date
         try:
-            df = quandl.get("FRED/"+fred_ticker, start_date=new_start_date, end_date=todays_date)
+            df = quandl.get("FRED/"+fred_ticker, start_date=start_date, end_date=todays_date)
         except NotFoundError:
             print("Couldn't find Quandl code '{}' - ({})".format(fred_ticker, indicator_name))
 
         # rename the column
-        renamed_df = df.rename(columns={"Value": indicator_name})
-
-        # fill in the values between the data readings
-        filled_indicator_df = fill_in_days_between_economic_readings(renamed_df)
+        indicator_df = df.rename(columns={"Value": indicator_name})
 
         # add this column to the final df
-        fred_df = pd.concat([fred_df, filled_indicator_df], axis=1)
-        
-    # rename the index
-    fred_df.index.rename("date", inplace=True)
+        fred_df = pd.concat([fred_df, indicator_df], axis=1)
 
-    # remove the three months previous worth of data
-    final_df = fred_df.loc[datetime.strptime(start_date, "%Y-%m-%d").date():, :]
+    # finalise the types of the datframe
+    final_df = finalise_df_types(fred_df, start_date, date_colname="date")
 
     # output the data to a CSV
-    final_df.to_csv(os.path.join(data_directory, "fred_economic_data.csv"))
+    final_df.to_csv(os.path.join(data_directory, "fred_economic_data.csv"), index_label="date")
 
     return final_df
 
@@ -870,12 +767,11 @@ def scrape_indicator(url):
     return indicators
 
 
-def scrape_db_nomics_country_indicators(country_indicator_dict, countries_dict, start_date, fill_start_date):
+def scrape_db_nomics_country_indicators(country_indicator_dict, countries_dict):
     
-    all_country_indicator_df = pd.DataFrame()
-    failed_urls = []
-
     # scrape the indicators that need to be combined with the country codes
+    failed_urls = []
+    all_country_indicator_df = pd.DataFrame()
     with tqdm(total=(len(country_indicator_dict) * len(countries_dict))) as pbar:
         for indicator_name, ticker in country_indicator_dict.items():
             # iterate through each country
@@ -887,7 +783,6 @@ def scrape_db_nomics_country_indicators(country_indicator_dict, countries_dict, 
 
                 # scrape the data
                 url = "https://api.db.nomics.world/v22/series/{}?observations=1".format(ind_and_country_ticker)
-
                 try:
                     df = scrape_indicator(url)
                 except:
@@ -895,46 +790,26 @@ def scrape_db_nomics_country_indicators(country_indicator_dict, countries_dict, 
                     pbar.update(1)
                     continue
 
-                # turn the index to a datetime
+                # turn the index to a datetime & rename the column
                 df.index = pd.to_datetime(df.index)
-            
-                # rename the column
                 df.columns = [ind_and_country_name]
 
-                # remove unneccesary dates - speed up computation
-                subset_df = df.loc[datetime.strptime(fill_start_date, "%Y-%m-%d").date():, :]
-
-                # check if the subsetted dataframe is now empty
-                if subset_df.empty:
-                    pbar.update(1)
-                    continue
-
-                # fill in the values between the data readings
-                filled_df = fill_in_days_between_economic_readings(subset_df)
-
-                # check if all values are now Nan in this dataframe
-                if pd.DataFrame(filled_df.value_counts()).empty:
+                # check if the subsetted dataframe is now empty or if all values in this dataframe are NaN
+                if df.empty or pd.DataFrame(df.value_counts()).empty:
                     pbar.update(1)
                     continue
 
                 # add this to a dataframe of all the data
-                all_country_indicator_df = pd.concat([all_country_indicator_df, filled_df], axis=1)
+                all_country_indicator_df = pd.concat([all_country_indicator_df, df], axis=1)
                 pbar.update(1)
 
-    # rename the index
-    all_country_indicator_df.index.rename("date", inplace=True)
-
-    # remove the three months previous worth of data
-    final_country_indicator_df = all_country_indicator_df.loc[datetime.strptime(start_date, "%Y-%m-%d").date():, :]
-
-    return final_country_indicator_df, failed_urls
+    return all_country_indicator_df, failed_urls
 
 
-def scrape_db_nomics_standalone_indicators(indicator_dict, time_period_dict, start_date, fill_start_date):
-    
-    all_standalone_indicator_df = pd.DataFrame()
+def scrape_db_nomics_standalone_indicators(indicator_dict, time_period_dict):
 
     # scrape the indicators that need to be combined with the country codes
+    all_standalone_indicator_df = pd.DataFrame()
     with tqdm(total=(len(indicator_dict) * len(time_period_dict))) as pbar:
         for indicator_name, ticker in indicator_dict.items():
             # iterate through each time period
@@ -948,55 +823,41 @@ def scrape_db_nomics_standalone_indicators(indicator_dict, time_period_dict, sta
                 url = "https://api.db.nomics.world/v22/series/{}?observations=1".format(ind_and_per_ticker)
                 df = scrape_indicator(url)
 
-                # turn the index to a datetime
+                # turn the index to a datetime & rename the column
                 df.index = pd.to_datetime(df.index)
-            
-                # rename the column
                 df.columns = [ind_and_per_name]
 
-                # remove unneccesary dates - speed up computation
-                subset_df = df.loc[datetime.strptime(fill_start_date, "%Y-%m-%d").date():, :]
-
-                # fill in the values between the data readings
-                filled_df = fill_in_days_between_economic_readings(subset_df)
-
                 # add this to a dataframe of all the data
-                all_standalone_indicator_df = pd.concat([all_standalone_indicator_df, filled_df], axis=1)
+                all_standalone_indicator_df = pd.concat([all_standalone_indicator_df, df], axis=1)
                 pbar.update(1)
 
-    # rename tbe index
-    all_standalone_indicator_df.index.rename("date", inplace=True)
-
-    # remove the three months previous worth of data
-    final_standalone_indicator_df = all_standalone_indicator_df.loc[datetime.strptime(start_date, "%Y-%m-%d").date():, :]
-
-    return final_standalone_indicator_df
+    return all_standalone_indicator_df
 
 
-def scrape_db_nomics_economic_data(data_directory, start_date, standalone_indicator_dict, country_indicator_dict, countries_dict, time_periods_dict):
+def scrape_db_nomics_economic_data(data_directory, start_date, config_variables):
 
-    # scrape three months prior to the start date - helps when filling the data
-    y, m, d = start_date.split("-")
-    new_month = int(m)-3 if int(m) > 3 else (12 if int(m) == 3 else (11 if int(m) == 2 else 10))
-    fill_start_date = "-".join([y if int(m) > 3 else str(int(y)-1), str(new_month), d])
+    # Extract the needed variables from the configuration dictionary
+    time_periods_dict = config_variables["db_nomics_time_periods"]
+    standalone_tickers = config_variables["db_nomics_eurostat_tickers_standalone"]
+    country_codes_dict = config_variables["db_nomics_countries"]
+    country_specific_tickers = config_variables["db_nomics_eurostat_tickers_for_countries"]
 
     # scrape the indicators that are standalone
-    standalone_indicators = scrape_db_nomics_standalone_indicators(standalone_indicator_dict, time_periods_dict, start_date, fill_start_date)
-
-    #print(standalone_indicators)
+    standalone_indicators = scrape_db_nomics_standalone_indicators(standalone_tickers, time_periods_dict)
 
     # scrape the indicators that need to be combined with the country codes
-    country_specific_indicators, failed_urls = scrape_db_nomics_country_indicators(country_indicator_dict, countries_dict, start_date, fill_start_date)
-
-    #print(country_specific_indicators)
+    country_specific_indicators, failed_urls = scrape_db_nomics_country_indicators(country_specific_tickers, country_codes_dict)
 
     # join these into one dataframe
     all_economic_df = pd.concat([standalone_indicators, country_specific_indicators], axis=1)
 
-    # output the data to a CSV
-    all_economic_df.to_csv(os.path.join(data_directory, "dbnomics_economic_data.csv"))
+    # finalise the types of the datframe
+    final_df = finalise_df_types(all_economic_df, start_date, date_colname="date")
 
-    return all_economic_df, failed_urls
+    # output the data to a CSV
+    final_df.to_csv(os.path.join(data_directory, "dbnomics_economic_data.csv"), index_label="date")
+
+    return final_df, failed_urls
 
 
 
@@ -1121,10 +982,13 @@ def turn_date_to_twitter_api_format(date):
     return new_date
 
 
-def scrape_tweets_sentiment(query_words, start_date, config_variables):
+def scrape_tweets_sentiment(data_directory, start_date, config_variables):
 
     # define the twitter environment name
     env_name = config_variables["twitter_env_name"]
+
+    # define the query words to use
+    bitcoin_query_words = config_variables["twitter_bitcoin_query_words"]
 
     # define the api to access twitter
     twitter_api = define_twitter_api()
@@ -1135,7 +999,7 @@ def scrape_tweets_sentiment(query_words, start_date, config_variables):
     interval_size_in_days = int(str(todays_date - start_date_datetime).split(",")[0].split(" ")[0])
 
     # turn the query words into a query
-    search_query = ' OR '.join([word if len(word.split(" ")) == 1 else '"'+word+'"' for word in query_words])
+    search_query = ' OR '.join([word if len(word.split(" ")) == 1 else '"{}"'.format(word) for word in query_words])
 
     # iterate through each day and calculate the sentiment of tweets for that day
     all_sentiment_dfs = pd.DataFrame()
@@ -1161,6 +1025,9 @@ def scrape_tweets_sentiment(query_words, start_date, config_variables):
     # set the index name to 'date'
     all_sentiment_dfs.index.rename("date", inplace=True)
 
+    # save this to a csv
+    all_sentiment_dfs.to_csv(os.path.join(data_directory, "twitter_bitcoin_sentiment_social_media_data.csv"), index=True)
+
     return all_sentiment_dfs
 
 
@@ -1174,10 +1041,12 @@ def get_influencers_tweets(api, env_name, username, query, from_date, to_date, n
     pass
 
 
-def scrape_influencer_tweets(bitcoin_influencers, search_query, start_date, config_variables):
+def scrape_influencer_tweets(start_date, config_variables):
 
-    # define the twitter environment name
+    # define the twitter environment name, bitcoin influencers account names, the query words to use
     env_name = config_variables["twitter_env_name"]
+    bitcoin_influencers = config_variables["twitter_bitcoin_influencers"]
+    bitcoin_query_words = config_variables["twitter_bitcoin_query_words"]
 
     # define the api to access twitter
     twitter_api = define_twitter_api()
@@ -1196,7 +1065,6 @@ def scrape_influencer_tweets(bitcoin_influencers, search_query, start_date, conf
         # calling function to get tweets
         tweets = get_influencers_tweets(twitter_api, env_name, username=twitter_username, query=search_query, from_date=from_date, to_date=to_date)
 
-
         break
 
 
@@ -1213,23 +1081,19 @@ def get_all_musks_tweets(data_directory):
     # print the date range of the scrape
     min_date = min(tweets_full_df["date"])
     max_date = max(tweets_full_df["date"])
-    print("Scraping tweets from '{}' --> '{}'".format(min_date.split(" ")[0], max_date.split(" ")[0]))
+    print("Extracting Musks tweets from '{}' --> '{}'".format(min_date.split(" ")[0], max_date.split(" ")[0]))
+    print("  - {} tweets extracted".format(len(tweets_full_df)))
 
-    # set up dataframe to store this tweets data
-    tweet_df = pd.DataFrame(columns=["date", "tweet", "sentiment"])
+    # extract the columns we want
+    tweets_df = tweets_full_df[["date", "tweet"]]
 
-    # iterate through each tweet and add it to our dataframe
-    for index, row in tweets_full_df.iterrows():
-        tweet_date = datetime. strptime(row["date"], '%Y-%m-%d %H:%M:%S').date()
-        tweet = row["tweet"]
-        row_df = pd.DataFrame({"date": tweet_date, "tweet": tweet, "sentiment": get_tweet_sentiment(tweet)}, index=[0])
+    # calculate the tweet sentiment
+    tweets_df["sentiment"] = tweets_df["tweet"].apply(get_tweet_sentiment)
 
-        # add this tweet to the dataframe of all tweets
-        tweet_df = tweet_df.append(row_df).reset_index(drop=True)
+    # remove the time from the date column
+    tweets_df["date"] = pd.to_datetime(tweets_df["date"]).dt.date
 
-    print("  - {} tweets scraped".format(len(tweets_full_df)))
-
-    return tweet_df
+    return tweets_df
 
 
 def subset_tweet_df_to_tweets_related_to_bitcoin(tweets_df, bitcoin_related_words):
@@ -1256,9 +1120,8 @@ def batch_tweets_for_daily_sentiment_breakdown(tweets_df):
         one_days_tweets = tweets_df[tweets_df["date"] == date]
 
         tweets_dicts = []
-        for i, r in one_days_tweets.iterrows():
-            tweet_dict = {"sentiment": r["sentiment"]}
-            tweets_dicts.append(tweet_dict)
+        for _, row in one_days_tweets.iterrows():
+            tweets_dicts.append({"sentiment": row["sentiment"]})
 
         # get the sentiment breakdown of that days tweets
         day_sentiment_breakdown = get_sentiment_breakdown_of_tweets(tweets_dicts, date)
@@ -1269,25 +1132,10 @@ def batch_tweets_for_daily_sentiment_breakdown(tweets_df):
     return all_days_sentiment_breakdown
 
 
-def fill_days_without_tweets(df, start_date):
+def get_musk_bitcoin_sentiment_data(data_directory, start_date, config_variables):
 
-    # find the max and min values in the dataframe
-    max_date = datetime.now().date()
-    date_range = pd.date_range(start=start_date, end=max_date)
-
-    # create a blank dataframe with a date for each day in this range
-    date_for_each_day_df = pd.DataFrame(index=[d.date() for d in date_range])
-
-    # add the input dataframe data to this daily dataframe
-    full_df = pd.concat([date_for_each_day_df, df], axis=1)
-
-    # fill the 'nan' values in this df by carrying the reading values forward till the next reading
-    filled_df = full_df.fillna(value=0)
-
-    return filled_df
-
-
-def get_musk_bitcoin_sentiment_data(data_directory, bitcoin_related_phrases, start_date):
+    # Define the bitcoin related query words to look at
+    bitcoin_related_phrases = config_variables["twitter_bitcoin_query_words"]
 
     # get all musks tweets
     musk_tweets_df = get_all_musks_tweets(data_directory)
@@ -1301,62 +1149,11 @@ def get_musk_bitcoin_sentiment_data(data_directory, bitcoin_related_phrases, sta
     # make sure the columns have musks name in it
     musk_daily_sentiment_breakdown.columns = ["musk_"+c for c in musk_daily_sentiment_breakdown]
 
-    # fill in the days when he didn't have a bitcoin tweet
-    filled_musk_daily_sentiment_df = fill_days_without_tweets(musk_daily_sentiment_breakdown, start_date)
+    # finalise the types of the datframe
+    final_df = finalise_df_types(musk_daily_sentiment_breakdown, start_date, date_colname="date")
 
-    # rename the index to date
-    filled_musk_daily_sentiment_df.index.rename("date", inplace=True)
+   # save this to a csv
+    final_df.to_csv(os.path.join(data_directory, "musk_bitcoin_sentiment_social_media_data.csv"), index_label="date")
 
-    return filled_musk_daily_sentiment_df
-
-
-# ================================================
-# |             MERGING DATA SOURCES             |
-# ================================================
-
-def merge_dfs_on_col(list_of_dfs, col_to_join_on):
-
-    # merge the dataframes on the specified column
-    merged_df = list_of_dfs[0]
-    for df in list_of_dfs[1:]:
-        merged_df = pd.merge(merged_df, df, on=col_to_join_on, how="outer")
-        
-    # sort the df by the date
-    sorted_merged_df = merged_df.sort_values(col_to_join_on).reset_index(drop=True)
-
-    return sorted_merged_df
-
-
-def merge_dfs_on_index(list_of_dfs):
-
-    # merge the dataframes on the specified column
-    merged_df = list_of_dfs[0]
-    for df in list_of_dfs[1:]:
-        merged_df = pd.merge(merged_df, df, left_index=True, right_index=True, how="outer")
-        
-    # return the dataframe sorted by the date
-    return merged_df.sort_index()
-
-
-def read_in_all_data_and_merge_it(data_directory, list_of_files, start_date):
-    
-    # create a df to store the data
-    start_date = datetime.strptime(start_date, '%Y-%m-%d')
-    merged_df = pd.DataFrame(index=pd.date_range(start=start_date, end=datetime.today()))
-    merged_df.index = merged_df.index.rename("date")
-
-    # iterate through each file
-    for file in list_of_files:
-
-        # read in the data
-        filepath = os.path.join(data_directory, file)
-        df = pd.read_csv(filepath)
-
-        # set the date to its index
-        df = df.set_index("date")
-
-        # add this data to a dataframe of all the data
-        merged_df = pd.merge(merged_df, df, left_index=True, right_index=True, how="outer")
-
-    return merged_df
+    return final_df
 
