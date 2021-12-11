@@ -66,25 +66,11 @@ def get_features(train_df):
     return train_features, cols_to_drop
 
 
-def is_nan(val):
-    """
-    Check if a value is 'Nan'
-
-    Params:
-        val: any type - can be a variable of any datatype
-
-    Return:
-        Boolean: Whether the value is an 'Nan' value or not
-    """
-    return val != val
-
-
 def get_cols_with_nan(df):
 
     nan_cols = []
     for col in df.columns:
-        any_nan = df[col].isnull().values.any()
-        if any_nan:
+        if df[col].isnull().values.any():
             nan_cols.append(col)
 
     return nan_cols
@@ -93,13 +79,13 @@ def get_cols_with_nan(df):
 def drop_nan_cols(df):
 
     nan_cols = get_cols_with_nan(df)
+    print("\nDropping the following 'NaN' columns:\n", nan_cols, "\n")
 
     dropped = df.copy()
-    print("Dropping the following 'Nan' columns:\n", nan_cols)
     return dropped.drop(columns=nan_cols)
 
 
-def scale_the_data(estimators_list, x_train):
+def scale_the_data(estimators_list, x_train, verbose):
 
     """
     Scale the input data using the input estimators
@@ -113,7 +99,7 @@ def scale_the_data(estimators_list, x_train):
     """
 
     # define the pipeline
-    scale = Pipeline(estimators_list, verbose=True)
+    scale = Pipeline(estimators_list, verbose=verbose)
     scale.fit(x_train)
 
     # scale the data
@@ -122,17 +108,15 @@ def scale_the_data(estimators_list, x_train):
     return scaled_x_train
 
 
-def train_pca_model(num_features, x_train, random_seed, output_explained_variance, variance_intervals_to_keep=2.5):
+def train_pca_model(x_train, num_features, random_seed):
 
     """
     Create a PCA model with a specified number of components using the input data
 
     Parameters:
         num_features (int) : The number of features to use in the PCA model
-        x_train (np.array) : a numpy array containing the training features to train the PCA model on and to transform to the principal components
         random_seed (int) : The random seed to use when creating the PCA model
-        output_explained_variance (boolean) : Whether or not you want to output the PCA models explained variance over the specified number of features
-        variance_intervals_to_keep (float) : 
+        x_train (np.array) : a numpy array containing the training features to train the PCA model on and to transform to the principal components
 
     Returns:
         (PCA model) : the trained PCA model
@@ -142,39 +126,55 @@ def train_pca_model(num_features, x_train, random_seed, output_explained_varianc
     pca = PCA(n_components=num_features, random_state=random_seed)
     pca.fit(x_train)
 
-    # output a graph of the explained variance
-    if output_explained_variance:
-
-        #Plotting the Cumulative Summation of the Explained Variance
-        plt.figure()
-        plt.plot(np.cumsum(pca.explained_variance_ratio_))
-        plt.xlabel('Number of Components')
-        plt.ylabel('Cumulative variance (%)')
-        plt.title('Explained Variance')
-        plt.show()
-
-        # define a dataframe of the explained variances for the components
-        expl_var_df = pd.DataFrame(columns=["component_num", "explained_variance", "cumulative_explained_variance"])
-        cumulative = 0
-        for comp_num, var in enumerate(list(pca.explained_variance_ratio_)):
-            cumulative += var
-            component_var_df = pd.DataFrame({"component_num": comp_num, "explained_variance": var, "cumulative_explained_variance": cumulative}, index=[0])
-            expl_var_df = pd.concat([expl_var_df, component_var_df]).reset_index(drop=True)
-
-        # subset this dataframe
-        keep_indexes = []
-        for index, row in expl_var_df.iterrows():
-
-            if index != 0:
-                div_curr = (row["cumulative_explained_variance"]*100) // variance_intervals_to_keep
-                div_prev = (expl_var_df.loc[index-1, "cumulative_explained_variance"]*100) // variance_intervals_to_keep
-
-            if (index % 5 == 0) or (div_curr > div_prev):
-                keep_indexes.append(index)
-
-        print(expl_var_df.loc[keep_indexes, :].to_markdown())
-
     return pca
+
+
+def plot_explained_variance(x_train, random_seed, num_features, max_variance_interval=2.5):
+
+    """
+    Plot the explained variance of each PCA component calculated using the input dataset
+
+    Parameters:
+        x_train (np.array) : a numpy array containing the training features to train the PCA model on and to transform to the principal components
+        random_seed (int) : The random seed to use when creating the PCA model
+        num_features (int) : The number of features to use in the PCA model
+        max_variance_interval (float) : 
+
+    Returns:
+        None
+    """
+
+    # get the 'n' most important principal components
+    pca = train_pca_model(x_train, num_features, random_seed)
+
+    #Plotting the Cumulative Summation of the Explained Variance
+    plt.figure()
+    plt.plot(np.cumsum(pca.explained_variance_ratio_))
+    plt.xlabel('Number of Components')
+    plt.ylabel('Cumulative variance (%)')
+    plt.title('Explained Variance')
+    plt.show()
+
+    # define a dataframe of the explained variances for the components
+    expl_var_df = pd.DataFrame(columns=["component_num", "explained_variance", "cumulative_explained_variance"])
+    cumulative = 0
+    for comp_num, var in enumerate(list(pca.explained_variance_ratio_)):
+        cumulative += var
+        component_var_df = pd.DataFrame({"component_num": comp_num, "explained_variance": var, "cumulative_explained_variance": cumulative}, index=[0])
+        expl_var_df = pd.concat([expl_var_df, component_var_df]).reset_index(drop=True)
+
+    # subset this dataframe
+    keep_indexes = []
+    for index, row in expl_var_df.iterrows():
+
+        if index != 0:
+            div_curr = (row["cumulative_explained_variance"]*100) // max_variance_interval
+            div_prev = (expl_var_df.loc[index-1, "cumulative_explained_variance"]*100) // max_variance_interval
+
+        if (index % 5 == 0) or (div_curr > div_prev):
+            keep_indexes.append(index)
+
+    print(expl_var_df.loc[keep_indexes, :].to_markdown())
 
 
 def main():
@@ -190,53 +190,58 @@ def main():
     train_intervals_list = config_variables["train_intervals_list"]
 
     # read in the data
-    processed_data = pd.read_csv(os.path.join(data_directory, 'processed_data.csv'))
+    processed_data = pd.read_csv(os.path.join(data_directory, 'Processed_data', 'full_processed_data.csv'))
 
     # define the estimator to scale the data
     estimator = [['minmax', MinMaxScaler(feature_range=(-1, 1))],
                 ]
 
-    # Iterate through the intervals and number of features & do PCA on the data
-    for interval_num in range(1, len(train_intervals_list)+1):
-
-        print("-------------")
-        print("Interval:", interval_num)
-
-        # get the start and end dates for this interval
-        train_start_date, train_end_date = train_intervals_list[interval_num-1] 
+    # Iterate through the intervals and plot their explained variance
+    interval_to_data = {}
+    for train_start_date, train_end_date in tqdm(train_intervals_list):
+        print("-------------\nTime Interval:", train_start_date, "-->", train_end_date)
+        time_interval_str = '{}_to_{}'.format(train_start_date, train_end_date)
 
         # define the train data for this date interval
-        train_df = get_subset_of_data(processed_data, train_start_date, train_end_date)
-        get_date_range_of_data(train_df)
+        train_df = pca.get_subset_of_data(processed_data, train_start_date, train_end_date)
 
+        # drop any features that have Nan's in them
+        no_nan_train_df = pca.drop_nan_cols(train_df)
+        
         # get a dataframe of the data's features
-        train_features, dropped_cols = get_features(train_df)
+        train_features, dropped_cols = pca.get_features(no_nan_train_df)
 
         # scale these features
-        scaled_x_train = scale_the_data(estimator, train_features)
+        scaled_x_train = pca.scale_the_data(estimator, train_features, verbose=False)
 
         # plot the explained variance
-        _ = pca.train_pca_model(100, scaled_x_train, random_seed, output_explained_variance=True)
+        pca.plot_explained_variance(scaled_x_train, random_seed, num_features=100, max_variance_interval=2.5)
+        
+        # store the scaled features and the dropped target prices for this interval
+        interval_to_data[time_interval_str] = (scaled_x_train, train_df[dropped_cols])
+
+    # Perform the Principal Component Analysis (PCA)
+    for (time_interval_str, (scaled_x_train, target_cols_df)) in tqdm(interval_to_data.items()):
 
         # iterate through the number of features to train the model on 
         for num_features in num_pca_features_list:
 
             # train PCA model
-            pca_model = train_pca_model(num_features, scaled_x_train, random_seed, output_explained_variance=False)
+            pca_model = pca.train_pca_model(scaled_x_train, num_features, random_seed)
 
             # export the model for tranfroming other datasets
-            pca_model_path = os.path.join(model_directory, 'PCA', 'pca_{}_interval_{}.joblib'.format(num_features, interval_num))
+            pca_model_path = os.path.join(model_directory, 'PCA', 'pca_{}__{}.joblib'.format(num_features, time_interval_str))
             dump(pca_model, pca_model_path)
 
             # transform the train features to the PCA models 'n' principal components
             pca_train_features = pd.DataFrame(pca_model.transform(scaled_x_train))
 
             # add the dropped shifted and binary price change columns back into the data
-            for col in dropped_cols:
-                pca_train_features[col] = train_df[col]
-                    
+            for col in target_cols_df.columns:
+                pca_train_features[col] = target_cols_df[col]
+
             # output these table as a dataframe
-            train_path = os.path.join(data_directory, 'Feat_select', 'pca_{}_interval_{}.csv'.format(num_features, interval_num))
+            train_path = os.path.join(data_directory, 'Feat_select', 'pca_{}__{}.csv'.format(num_features, time_interval_str))
             pca_train_features.to_csv(train_path, index=False)
 
 
