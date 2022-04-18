@@ -80,13 +80,18 @@ def merge_different_bitcoinity_exchanges_into_one_col(df, list_of_features):
 
 
 def merge_dfs_on_col(list_of_dfs, col):
+    """
+    Merge the dataframes in a given list on the specified column
 
-    # merge the dataframes on the specified column
+    :param list_of_dfs: list of datarames to merge together
+    :param col: name of a column in each of the DataFrames to merge on
+
+    :return: merged DataFrame
+    """
     merged_df = list_of_dfs[0]
     for df in list_of_dfs[1:]:
         merged_df = pd.merge(merged_df, df, on=col, how="outer")
 
-    # return the dataframe
     return merged_df
 
 
