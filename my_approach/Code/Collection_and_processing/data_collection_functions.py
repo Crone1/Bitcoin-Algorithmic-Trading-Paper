@@ -149,7 +149,7 @@ def re_index_df_to_have_row_for_each_date(df, start_date):
 
     # drop any data from the input df for today
     if yesterday > str(min(df.index)):
-        df = df.loc[datetime.strptime(yesterday, "%Y-%m-%d").date():, :]
+        df = df.loc[:datetime.strptime(yesterday, "%Y-%m-%d").date(), :]
 
     # create an index going from the start date till yesterday
     index = pd.date_range(start_date, yesterday)
